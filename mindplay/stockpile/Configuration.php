@@ -35,7 +35,7 @@ abstract class Configuration
    *
    * @see load()
    */
-  const ABS_PATH_PATTERN = '/^(?:\/|\\|\w\:\\).*$/';
+  const ABS_PATH_PATTERN = '/^(?:\/|\\\\|\w\:\\\\).*$/';
   
   /**
    * @var array map of property-names to type-names (parsed from PHP-DOC block)
