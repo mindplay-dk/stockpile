@@ -113,7 +113,7 @@ abstract class Configuration
     
     $this->_types['config'] = get_class($this);
     
-    $this->_objects['config'] = $this;
+    $this->_container['config'] = $this;
     
     // configure root-path:
     
@@ -190,6 +190,12 @@ abstract class Configuration
    */
   public function seal()
   {
+    foreach ($this->_types as $name => $type) {
+      if (!array_key_exists($name, $this->_container)) {
+        throw new ConfigurationException('missing configuration of component: '.$name);
+      }
+    }
+    
     foreach ($this->_config as $name => $config) {
       if (!array_key_exists($name, $this->_types)) {
         throw new ConfigurationException('attempted configuration of undefined component: '.$name);
