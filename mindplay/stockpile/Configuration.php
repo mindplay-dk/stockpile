@@ -48,7 +48,7 @@ abstract class Configuration
   private $_container = array();
 
   /**
-   * @var array map of property-names to late configuration-functions
+   * @var array map of where $property_name => Closure[] (list of late configuration-functions)
    */
   private $_config = array();
 
@@ -61,6 +61,12 @@ abstract class Configuration
    * @var bool true if the configuration-container has been sealed
    */
   private $_sealed = false;
+  
+  /**
+   * @var array map where $property_name => Closure[] (list of closures to invoke
+   *            when the configuration-container is destroyed)
+   */
+  private $_shutdown = array();
   
   /**
    * @var string the root-path of configuration-files (with trailing directory-separator)
@@ -121,6 +127,79 @@ abstract class Configuration
   }
   
   /**
+   * Runs any shutdown-functions registered in the configuration-container.
+   *
+   * @see shutdown()
+   */
+  public function __destruct()
+  {
+    foreach ($this->_shutdown as $name => $functions) {
+      if (array_key_exists($name, $this->_objects)) {
+        foreach ($functions as $function) {
+          $this->_invoke($function);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Registers the component with the given name.
+   *
+   * Calling this is equivalent to setting the property directly on the container, but
+   * avoids type-violation warnings as detected by an IDE that supports and inspects
+   * the property-annotations on your configuration-container class.
+   *
+   * @param string $name name of component to register.
+   * @param mixed $value an object or value of the type required for the specified component,
+   *                     or a closure that creates and returns such an object or value.
+   */
+  public function register($name, $value)
+  {
+    $this->__set($name, $value);
+  }
+  
+  /**
+   * Register a shutdown-function.
+   *
+   * When the configuration-container is destroyed, any registered shutdown-functions for
+   * components that were initialized, will be run. The first parameter of a shutdown-function
+   * identifies the component that causes the shutdown-function to run - additional parameters
+   * specify other components, which will be initialized (if needed) and injected.
+   *
+   * Shutdown-functions are run in the order they are added.
+   * 
+   * @param Closure $function shutdown-function with parameter-names corresponding to
+   *                          the names of configured components - the first parameter
+   *                          specifies which component triggers the shutdown-function.
+   */
+  public function shutdown(Closure $function)
+  {
+    // check parameters:
+    
+    $fn = new ReflectionFunction($function);
+    
+    $params = $fn->getParameters();
+    
+    if (count($params) === 0) {
+      throw new ConfigurationException('shutdown-functions must have at least one parameter');
+    }
+    
+    $name = $params[0]->getName();
+    
+    if (!isset($this->_types[$name])) {
+      throw new ConfigurationException('undefined property: $'.$name.' (all properties must be defined using @property-annotations.)');
+    }
+    
+    // add the configuration-function:
+
+    if (!array_key_exists($name, $this->_shutdown)) {
+      $this->_shutdown[$name] = array();
+    }
+
+    $this->_shutdown[$name][] = $function;
+  }
+  
+  /**
    * Add a configuration-function to the container - the function will be called the first
    * time a configured property is accessed. Configuration-functions are called in the
    * order in which they were added.
@@ -148,7 +227,7 @@ abstract class Configuration
 
       $params = $fn->getParameters();
 
-      if (count($params) < 1) {
+      if (count($params) === 0) {
         throw new ConfigurationException('configuration-functions must have at least one parameter');
       }
 
@@ -191,7 +270,7 @@ abstract class Configuration
   public function seal()
   {
     foreach ($this->_types as $name => $type) {
-      if (!array_key_exists($name, $this->_container)) {
+      if (array_key_exists($name, $this->_container) === false) {
         throw new ConfigurationException('missing configuration of component: '.$name);
       }
     }
@@ -303,7 +382,7 @@ abstract class Configuration
     if (($value instanceof Closure) === false) {
       $this->checkType($name, $value);
     }
-
+    
     $this->_container[$name] = $value;
   }
   
@@ -312,11 +391,13 @@ abstract class Configuration
    */
   public function __get($name)
   {
-    if ($this->_sealed === false) {
-      throw new ConfigurationException('configuration container must be sealed before properties can be read');
-    }
+    if (array_key_exists($name, $this->_objects) === false) {
+      // first use - check if sealed:
+      
+      if ($this->_sealed === false) {
+        throw new ConfigurationException('configuration container must be sealed before properties can be read');
+      }
 
-    if (!array_key_exists($name, $this->_objects)) {
       // first use - initialize the property:
       
       if (!array_key_exists($name, $this->_container)) {

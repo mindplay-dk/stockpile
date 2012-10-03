@@ -43,14 +43,14 @@ $config = new MyConfig;
 
 // use an anonymous closure to configure a property for late construction:
 
-$config->greeter = function($time) {
+$config->register('greeter', function($time) {
   // the $time configuration-value is automatically injected
   $g = new Greeter;
   
   $g->day = date('l', $time);
   
   return $g;
-};
+});
 
 // property-types must match those defined in the @property-annotations above:
 
