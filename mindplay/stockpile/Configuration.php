@@ -28,7 +28,7 @@ abstract class Configuration
   /**
    * Regular expression used by the constructor to parse @property-annotations
    */
-  const PROPERTY_PATTERN = '/^\s*\*+\s*\@property(?:\-read|\-write|)\s+([\w\\\\]+)\s+\$(\w+)/im';
+  const PROPERTY_PATTERN = '/^\s*\*+\s*\@property(?:\-read|\-write|)\s+([\w\\\\]+(?:\\[\\]|))\s+\$(\w+)/im';
   
   /**
    * Regular expression used to determine if a path is absolute.
@@ -111,6 +111,10 @@ abstract class Configuration
     for ($i=0; $i<count($matches[0]); $i++) {
       $type = $matches[1][$i];
       $name = $matches[2][$i];
+      
+      if (substr_compare($type, '[]', -2) === 0) {
+        $type = 'array'; // shallow type-checking for array-types
+      }
 
       $this->_types[$name] = $type;
     }
@@ -124,6 +128,10 @@ abstract class Configuration
     // configure root-path:
     
     $this->_rootPath = rtrim($rootPath === null ? getcwd() : $rootPath, '/\\') . DIRECTORY_SEPARATOR;
+    
+    // initialize:
+    
+    $this->init();
   }
   
   /**
@@ -141,6 +149,11 @@ abstract class Configuration
       }
     }
   }
+  
+  /**
+   * Initialize the configuration container.
+   */
+  abstract protected function init();
   
   /**
    * Registers the component with the given name.
@@ -258,6 +271,10 @@ abstract class Configuration
   {
     if (preg_match(self::ABS_PATH_PATTERN, $path) === 0) {
       $path = $this->_rootPath . $path;
+    }
+    
+    if (file_exists($path) === false) {
+      throw new ConfigurationException('configuration file not found: '.$path);
     }
     
     require $path;
