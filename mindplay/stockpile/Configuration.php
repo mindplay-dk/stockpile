@@ -155,9 +155,10 @@ abstract class Configuration
     }
 
     /**
-     * Initialize the configuration container.
+     * Initialize the configuration container. Override as needed.
      */
-    abstract protected function init();
+    protected function init()
+    {}
 
     /**
      * Registers the component with the given name.

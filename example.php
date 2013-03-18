@@ -17,14 +17,14 @@ header('Content-type: text/plain');
  */
 class Greeter
 {
-  public $name; // this will be set explicitly when the Greeter is constructed
-  public $day;  // this will be injected by the late-construction function
-  public $mood; // this will be injected by the configuration function
+    public $name; // this will be set explicitly when the Greeter is constructed
+    public $day;  // this will be injected by the late-construction function
+    public $mood; // this will be injected by the configuration function
 
-  public function sayHello()
-  {
-    echo "Hello, {$this->name}! Today is {$this->day} and I'm feeling {$this->mood}!";
-  }
+    public function sayHello()
+    {
+        echo "Hello, {$this->name}! Today is {$this->day} and I'm feeling {$this->mood}!";
+    }
 }
 
 /**
@@ -44,12 +44,12 @@ $config = new MyConfig;
 // use an anonymous closure to configure a property for late construction:
 
 $config->register('greeter', function($time) {
-  // the $time configuration-value is automatically injected
-  $g = new Greeter;
-  
-  $g->day = date('l', $time);
-  
-  return $g;
+    // the $time configuration-value is automatically injected
+    $g = new Greeter;
+
+    $g->day = date('l', $time);
+
+    return $g;
 });
 
 // property-types must match those defined in the @property-annotations above:
@@ -61,10 +61,10 @@ $config->mood = 'happy';
 // properties using late construction can be configured using a callback-method:
 
 $config->configure(function(Greeter $greeter, $mood) {
-  // the parameter-name (greeter) defines the property to be configured
-  // the $mood configuration-value is automatically injected
-  $greeter->name = 'World';
-  $greeter->mood = $mood;
+    // the parameter-name (greeter) defines the property to be configured
+    // the $mood configuration-value is automatically injected
+    $greeter->name = 'World';
+    $greeter->mood = $mood;
 });
 
 // configuration container must be sealed before properties can be read:
@@ -77,17 +77,17 @@ $config->greeter->sayHello();
 
 class Foo
 {
-  public $time;
+    public $time;
 }
 
 class Bar extends Foo
 {
-  private $mood='unaffected';
-  
-  public function getMood()
-  {
-    return $this->mood;
-  }
+    private $mood='unaffected';
+
+    public function getMood()
+    {
+        return $this->mood;
+    }
 }
 
 $foo = new Bar();
