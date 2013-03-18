@@ -26,8 +26,7 @@ use ReflectionFunction;
 abstract class Configuration
 {
     /**
-     * Regular expression used by the constructor to parse
-     * @property-annotations
+     * Regular expression used by the constructor to parse @property-annotations
      */
     const PROPERTY_PATTERN = '/^\s*\*+\s*\@property(?:\-read|\-write|)\s+([\w\\\\]+(?:\\[\\]|))\s+\$(\w+)/im';
 
@@ -44,7 +43,7 @@ abstract class Configuration
     private $_types = array();
 
     /**
-     * @var array map of property-names to intermediary (un-initialized) objects, closures or values
+   * @var array map of property-names to intermediary (un-initialized) objects, closures or values
      */
     private $_container = array();
 
@@ -161,19 +160,25 @@ abstract class Configuration
     {}
 
     /**
-     * Registers the component with the given name.
+     * Registers a Closure that initializes the component with the given name.
      *
-     * Calling this is equivalent to setting the property directly on the container, but
-     * avoids type-violation warnings as detected by an IDE that supports and inspects
-     * the property-annotations on your configuration-container class.
+     * @param string  $name    name of component to register.
+     * @param Closure $value   an object or value of the type required for the specified component,
+     *                         or a closure that creates and returns such an object or value.
      *
-     * @param string $name  name of component to register.
-     * @param mixed  $value an object or value of the type required for the specified component,
-     *                      or a closure that creates and returns such an object or value.
+     * @throws ConfigurationException
      */
-    public function register($name, $value)
+    public function register($name, Closure $value)
     {
-        $this->__set($name, $value);
+        if ($this->_sealed === true) {
+            throw new ConfigurationException('attempted access to sealed configuration container');
+        }
+
+        if (array_key_exists($name, $this->_container)) {
+            throw new ConfigurationException('property: $' . $name . ' has already been registered for initialization');
+        }
+
+        $this->_container[$name] = $value;
     }
 
     /**
@@ -351,6 +356,10 @@ abstract class Configuration
      */
     protected function checkType($name, $value)
     {
+        if (!isset($this->_types[$name])) {
+            throw new ConfigurationException('undefined configuration property $' . $name);
+        }
+
         $type = $this->_types[$name];
 
         if (strcasecmp($type, 'mixed') === 0) {
@@ -403,13 +412,7 @@ abstract class Configuration
             throw new ConfigurationException('attempted overwrite of property: $' . $name);
         }
 
-        if (!isset($this->_types[$name])) {
-            throw new ConfigurationException('undefined configuration property $' . $name);
-        }
-
-        if (($value instanceof Closure) === false) {
-            $this->checkType($name, $value);
-        }
+        $this->checkType($name, $value);
 
         $this->_container[$name] = $value;
     }
