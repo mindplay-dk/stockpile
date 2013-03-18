@@ -3,10 +3,8 @@ stockpile
 
 https://github.com/mindplay-dk/stockpile
 
-THIS LIBRARY IS CURRENTLY UNDER DEVELOPMENT.
-
-This is an experimental configuration-container for PHP 5.3, attempting to
-solve a number of problems with configuration in general.
+This is configuration-container for PHP 5.3 attempts to solve a number of
+problems with configuration in general.
 
 See "example.php" in the root-folder for an example of how to use this class.
 
