@@ -4,7 +4,7 @@
  * stockpile
  * =========
  *
- * A strongly-typed configuration-container for PHP 5.3.
+ * A strongly-typed service/configuration-container for PHP 5.3.
  *
  * @author Rasmus Schultz <rasmus@mindplay.dk>
  *
@@ -19,11 +19,9 @@ use ReflectionProperty;
 use ReflectionFunction;
 
 /**
- * Abstract base-class for configuration containers.
- *
- * @property-read Configuration $config self-reference to this configuration-container.
+ * Abstract base-class for service/configuration-containers.
  */
-abstract class Configuration
+abstract class Container
 {
     /**
      * Regular expression used by the constructor to parse @property-annotations
@@ -43,7 +41,7 @@ abstract class Configuration
     private $_types = array();
 
     /**
-   * @var array map of property-names to intermediary (un-initialized) objects, closures or values
+     * @var array map of property-names to intermediary (un-initialized) objects, closures or values
      */
     private $_container = array();
 
@@ -58,13 +56,13 @@ abstract class Configuration
     private $_objects = array();
 
     /**
-     * @var bool true if the configuration-container has been sealed
+     * @var bool true if the container has been sealed
      */
     private $_sealed = false;
 
     /**
      * @var array map where $property_name => Closure[] (list of closures to invoke
-     *            when the configuration-container is destroyed)
+     *            when the container is destroyed)
      */
     private $_shutdown = array();
 
@@ -79,27 +77,26 @@ abstract class Configuration
      * @see http://www.phpdoc.org/docs/latest/for-users/types.html
      */
     public static $checkers = array(
-        'string' => 'is_string',
-        'integer' => 'is_int',
-        'int' => 'is_int',
-        'boolean' => 'is_bool',
-        'bool' => 'is_bool',
-        'float' => 'is_float',
-        'double' => 'is_float',
-        'object' => 'is_object',
-        'array' => 'is_array',
+        'string'   => 'is_string',
+        'integer'  => 'is_int',
+        'int'      => 'is_int',
+        'boolean'  => 'is_bool',
+        'bool'     => 'is_bool',
+        'float'    => 'is_float',
+        'double'   => 'is_float',
+        'object'   => 'is_object',
+        'array'    => 'is_array',
         'resource' => 'is_resource',
-        'null' => 'is_null',
+        'null'     => 'is_null',
         'callback' => 'is_callable',
     );
 
     /**
-     * Initializes the configuration-container by parsing
-     *
-     * @property-annotations of the concrete class.
+     * Initializes the container by parsing <code>@property</code> annotations of the concrete class.
      *
      * @param string $rootPath the root-path of configuration-files, which can be loaded using {@see load()}
-     * @throws ConfigurationException if the configuration container has no @property-annotations
+     *
+     * @throws ContainerException if the container has no @property-annotations
      */
     public function __construct($rootPath = null)
     {
@@ -108,25 +105,19 @@ abstract class Configuration
         $class = new ReflectionClass(get_class($this));
 
         if (preg_match_all(self::PROPERTY_PATTERN, $class->getDocComment(), $matches) === 0) {
-            throw new ConfigurationException('class ' . get_class($this) . ' has no @property-annotations');
+            throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
         }
 
-        for ($i = 0; $i < count($matches[0]); $i++) {
+        for ($i = 0; $i < count($matches[0]); $i ++) {
             $type = $matches[1][$i];
             $name = $matches[2][$i];
 
-            if (substr_compare($type, '[]', -2) === 0) {
+            if (substr_compare($type, '[]', - 2) === 0) {
                 $type = 'array'; // shallow type-checking for array-types
             }
 
             $this->_types[$name] = $type;
         }
-
-        // make this Configuration-instance available for parameter-binding:
-
-        $this->_types['config'] = get_class($this);
-
-        $this->_container['config'] = $this;
 
         // configure root-path:
 
@@ -138,7 +129,7 @@ abstract class Configuration
     }
 
     /**
-     * Runs any shutdown-functions registered in the configuration-container.
+     * Runs any shutdown-functions registered in the container.
      *
      * @see shutdown()
      */
@@ -154,28 +145,29 @@ abstract class Configuration
     }
 
     /**
-     * Initialize the configuration container. Override as needed.
+     * Initialize the container after construction. Override as needed.
      */
     protected function init()
-    {}
+    {
+    }
 
     /**
-     * Registers a Closure that initializes the component with the given name.
+     * Registers a Closure that initializes the service/component/property with the given name.
      *
      * @param string  $name    name of component to register.
      * @param Closure $value   an object or value of the type required for the specified component,
      *                         or a closure that creates and returns such an object or value.
      *
-     * @throws ConfigurationException
+     * @throws ContainerException
      */
     public function register($name, Closure $value)
     {
         if ($this->_sealed === true) {
-            throw new ConfigurationException('attempted access to sealed configuration container');
+            throw new ContainerException('attempted access to sealed configuration container');
         }
 
         if (array_key_exists($name, $this->_container)) {
-            throw new ConfigurationException('property: $' . $name . ' has already been registered for initialization');
+            throw new ContainerException('property: $' . $name . ' has already been registered for initialization');
         }
 
         $this->_container[$name] = $value;
@@ -184,7 +176,7 @@ abstract class Configuration
     /**
      * Register a shutdown-function.
      *
-     * When the configuration-container is destroyed, any registered shutdown-functions for
+     * When the container is destroyed, any registered shutdown-functions for
      * components that were initialized, will be run. The first parameter of a shutdown-function
      * identifies the component that causes the shutdown-function to run - additional parameters
      * specify other components, which will be initialized (if needed) and injected.
@@ -195,7 +187,7 @@ abstract class Configuration
      *                          the names of configured components - the first parameter
      *                          specifies which component triggers the shutdown-function.
      *
-     * @throws ConfigurationException
+     * @throws ContainerException
      */
     public function shutdown(Closure $function)
     {
@@ -206,18 +198,18 @@ abstract class Configuration
         $params = $fn->getParameters();
 
         if (count($params) === 0) {
-            throw new ConfigurationException('shutdown-functions must have at least one parameter');
+            throw new ContainerException('shutdown-functions must have at least one parameter');
         }
 
         $name = $params[0]->getName();
 
-        if (!isset($this->_types[$name])) {
-            throw new ConfigurationException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
+        if (! isset($this->_types[$name])) {
+            throw new ContainerException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
         }
 
         // add the configuration-function:
 
-        if (!array_key_exists($name, $this->_shutdown)) {
+        if (! array_key_exists($name, $this->_shutdown)) {
             $this->_shutdown[$name] = array();
         }
 
@@ -230,21 +222,22 @@ abstract class Configuration
      * order in which they were added.
      *
      * @param Closure|Closure[] $config a single configuration-function (a Closure) or an array of functions
-     * @throws ConfigurationException
+     *
+     * @throws ContainerException
      */
     public function configure($config)
     {
         if ($this->_sealed === true) {
-            throw new ConfigurationException('attempted configuration of sealed configuration-container');
+            throw new ContainerException('attempted configuration of sealed Container');
         }
 
-        if (!is_array($config)) {
+        if (! is_array($config)) {
             $config = array($config);
         }
 
         foreach ($config as $index => $function) {
             if (($function instanceof Closure) === false) {
-                throw new ConfigurationException('parameter #' . $index . ' is not a Closure');
+                throw new ContainerException('parameter #' . $index . ' is not a Closure');
             }
 
             // obtain the first parameter-name:
@@ -254,18 +247,18 @@ abstract class Configuration
             $params = $fn->getParameters();
 
             if (count($params) === 0) {
-                throw new ConfigurationException('configuration-functions must have at least one parameter');
+                throw new ContainerException('configuration-functions must have at least one parameter');
             }
 
             $name = $params[0]->getName();
 
-            if (!isset($this->_types[$name])) {
-                throw new ConfigurationException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
+            if (! isset($this->_types[$name])) {
+                throw new ContainerException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
             }
 
             // add the configuration-function:
 
-            if (!array_key_exists($name, $this->_config)) {
+            if (! array_key_exists($name, $this->_config)) {
                 $this->_config[$name] = array();
             }
 
@@ -279,7 +272,8 @@ abstract class Configuration
      * (a configuration-file is simply a php-script running in an isolated function-context.)
      *
      * @param string $path either an absolute path to the configuration-file, or relative to {@see $rootPath}
-     * @throws ConfigurationException
+     *
+     * @throws ContainerException
      */
     public function load($path)
     {
@@ -288,7 +282,7 @@ abstract class Configuration
         }
 
         if (file_exists($path) === false) {
-            throw new ConfigurationException('configuration file not found: ' . $path);
+            throw new ContainerException('configuration file not found: ' . $path);
         }
 
         require $path;
@@ -302,13 +296,13 @@ abstract class Configuration
     {
         foreach ($this->_types as $name => $type) {
             if (array_key_exists($name, $this->_container) === false) {
-                throw new ConfigurationException('missing configuration of component: ' . $name);
+                throw new ContainerException('missing configuration of component: ' . $name);
             }
         }
 
         foreach ($this->_config as $name => $config) {
-            if (!array_key_exists($name, $this->_types)) {
-                throw new ConfigurationException('attempted configuration of undefined component: ' . $name);
+            if (! array_key_exists($name, $this->_types)) {
+                throw new ContainerException('attempted configuration of undefined component: ' . $name);
             }
         }
 
@@ -331,7 +325,7 @@ abstract class Configuration
             $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
 
             foreach ($properties as $property) {
-                if (!$this->__isset($property->getName())) {
+                if (! $this->__isset($property->getName())) {
                     continue; // no value with that name exists in this container
                 }
 
@@ -352,12 +346,12 @@ abstract class Configuration
 
     /**
      * Checks that the specified value conforms to the type defined by the
-     * @property-annotations of the concrete configuration-class.
+     * <code>@property</code> annotations of the concrete configuration-class.
      */
     protected function checkType($name, $value)
     {
-        if (!isset($this->_types[$name])) {
-            throw new ConfigurationException('undefined configuration property $' . $name);
+        if (! isset($this->_types[$name])) {
+            throw new ContainerException('undefined configuration property $' . $name);
         }
 
         $type = $this->_types[$name];
@@ -369,12 +363,12 @@ abstract class Configuration
         if (array_key_exists($type, self::$checkers) === true) {
             // check a known PHP pseudo-type:
             if (call_user_func(self::$checkers[$type], $value) === false) {
-                throw new ConfigurationException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
             }
         } else {
             // check a class or interface type:
             if (($value instanceof $type) === false) {
-                throw new ConfigurationException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
             }
         }
     }
@@ -384,6 +378,7 @@ abstract class Configuration
      *
      * @param Closure $closure the Closure to invoke
      * @param array   $params  parameters that have already been determined; optional
+     *
      * @return mixed the return-value from the invoked Closure
      */
     private function _invoke(Closure $closure, $params = array())
@@ -391,7 +386,7 @@ abstract class Configuration
         $fn = new ReflectionFunction($closure);
 
         foreach ($fn->getParameters() as $index => $param) {
-            if (!array_key_exists($index, $params)) {
+            if (! array_key_exists($index, $params)) {
                 $params[$index] = $this->__get($param->getName());
             }
         }
@@ -400,16 +395,16 @@ abstract class Configuration
     }
 
     /**
-     * @internal write-accessor for configuration-properties
+     * @internal write-accessor for directly setting configuration-properties
      */
     public function __set($name, $value)
     {
         if ($this->_sealed === true) {
-            throw new ConfigurationException('attempted access to sealed configuration container');
+            throw new ContainerException('attempted write-access to sealed Container');
         }
 
         if (array_key_exists($name, $this->_container)) {
-            throw new ConfigurationException('attempted overwrite of property: $' . $name);
+            throw new ContainerException('attempted overwrite of property: $' . $name);
         }
 
         $this->checkType($name, $value);
@@ -418,7 +413,7 @@ abstract class Configuration
     }
 
     /**
-     * @internal read-accessor for configuration-properties
+     * @internal read-accessor for component properties
      */
     public function __get($name)
     {
@@ -426,13 +421,13 @@ abstract class Configuration
             // first use - check if sealed:
 
             if ($this->_sealed === false) {
-                throw new ConfigurationException('configuration container must be sealed before properties can be read');
+                throw new ContainerException('Container must be sealed before properties can be read');
             }
 
             // first use - initialize the property:
 
-            if (!array_key_exists($name, $this->_container)) {
-                throw new ConfigurationException('undefined configuration property: $' . $name);
+            if (! array_key_exists($name, $this->_container)) {
+                throw new ContainerException('undefined property: $' . $name);
             }
 
             $object = $this->_container[$name];

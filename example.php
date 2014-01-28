@@ -2,11 +2,8 @@
 
 namespace mindplay\stockpile;
 
-require './mindplay/stockpile/Configuration.php';
-require './mindplay/stockpile/ConfigurationException.php';
-
-#use mindplay\stockpile\Configuration;
-#use mindplay\stockpile\ConfigurationException;
+require './mindplay/stockpile/Container.php';
+require './mindplay/stockpile/ContainerException.php';
 
 // ===== EXAMPLE =====
 
@@ -36,7 +33,7 @@ class Greeter
  * @property int $time the time of day
  * @property string $mood my current mood
  */
-class MyConfig extends Configuration
+class MyConfig extends Container
 {}
 
 $config = new MyConfig;
