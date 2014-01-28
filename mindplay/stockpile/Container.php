@@ -129,6 +129,14 @@ abstract class Container
     }
 
     /**
+     * @return string the root-path of configuration-files
+     */
+    public function getRootPath()
+    {
+        return $this->_rootPath;
+    }
+    
+    /**
      * Runs any shutdown-functions registered in the container.
      *
      * @see shutdown()
