@@ -41,19 +41,22 @@ abstract class Container
     private $_types = array();
 
     /**
-     * @var array map of property-names to intermediary (un-initialized) objects, closures or values
+     * @var Closure[] map of property-names to initialization closures
+     * @see register()
      */
-    private $_container = array();
+    private $_init = array();
 
     /**
-     * @var array map of where $property_name => Closure[] (list of late configuration-functions)
+     * @var Closure[] map of property-names to additional (late) configuration-functions
+     * @see configure()
      */
     private $_config = array();
 
     /**
-     * @var array map of property-names to initialized objects or values
+     * @var array map of property-names to initialized objects/values
+     * @see __get()
      */
-    private $_objects = array();
+    private $_values = array();
 
     /**
      * @var bool true if the container has been sealed
@@ -61,7 +64,7 @@ abstract class Container
     private $_sealed = false;
 
     /**
-     * @var array map where $property_name => Closure[] (list of closures to invoke
+     * @var Closure[] map where property_name => Closure[] (list of closures to invoke
      *            when the container is destroyed)
      */
     private $_shutdown = array();
@@ -130,12 +133,13 @@ abstract class Container
 
     /**
      * @return string the root-path of configuration-files
+     * @see load()
      */
     public function getRootPath()
     {
         return $this->_rootPath;
     }
-    
+
     /**
      * Runs any shutdown-functions registered in the container.
      *
@@ -144,7 +148,7 @@ abstract class Container
     public function __destruct()
     {
         foreach ($this->_shutdown as $name => $functions) {
-            if (array_key_exists($name, $this->_objects)) {
+            if (array_key_exists($name, $this->_values)) {
                 foreach ($functions as $function) {
                     $this->_invoke($function);
                 }
@@ -174,11 +178,11 @@ abstract class Container
             throw new ContainerException('attempted access to sealed configuration container');
         }
 
-        if (array_key_exists($name, $this->_container)) {
+        if (array_key_exists($name, $this->_init)) {
             throw new ContainerException('property: $' . $name . ' has already been registered for initialization');
         }
 
-        $this->_container[$name] = $value;
+        $this->_init[$name] = $value;
     }
 
     /**
@@ -244,7 +248,7 @@ abstract class Container
         }
 
         foreach ($config as $index => $function) {
-            if (($function instanceof Closure) === false) {
+            if (! ($function instanceof Closure)) {
                 throw new ContainerException('parameter #' . $index . ' is not a Closure');
             }
 
@@ -289,7 +293,7 @@ abstract class Container
             $path = $this->_rootPath . $path;
         }
 
-        if (file_exists($path) === false) {
+        if (! file_exists($path)) {
             throw new ContainerException('configuration file not found: ' . $path);
         }
 
@@ -302,19 +306,21 @@ abstract class Container
      */
     public function seal()
     {
+        if ($this->_sealed) {
+            throw new ContainerException("Container has already been sealed");
+        }
+
         foreach ($this->_types as $name => $type) {
-            if (array_key_exists($name, $this->_container) === false) {
+            if (! array_key_exists($name, $this->_init) && ! array_key_exists($name, $this->_values)) {
                 throw new ContainerException('missing configuration of component: ' . $name);
             }
         }
 
-        foreach ($this->_config as $name => $config) {
-            if (! array_key_exists($name, $this->_types)) {
-                throw new ContainerException('attempted configuration of undefined component: ' . $name);
-            }
+        foreach ($this->_values as $name => $value) {
+            $this->_configure($name); // configure components that were directly initialized
         }
 
-        $this->_sealed = true;
+        $this->_sealed = true; // seal container against further changes
     }
 
     /**
@@ -403,6 +409,58 @@ abstract class Container
     }
 
     /**
+     * Initializes the specified property and any dependencies
+     *
+     * @param string $name
+     *
+     * @throws ContainerException
+     */
+    private function _initialize($name)
+    {
+        if (! array_key_exists($name, $this->_types)) {
+            throw new ContainerException('undefined property: $' . $name);
+        }
+
+        // run initialization function:
+
+        $value = $this->_invoke($this->_init[$name]);
+
+        $this->checkType($name, $value); // will throw if the initialized value is bad
+
+        $this->_values[$name] = $value; // store initialized value
+
+        unset($this->_init[$name]); // dispose of initialization function
+    }
+
+    /**
+     * @param string $name
+     *
+     * @throws ContainerException
+     */
+    private function _configure($name)
+    {
+        if (! array_key_exists($name, $this->_values)) {
+            throw new ContainerException("internal error: attempted configured of uninitialized property");
+        }
+
+        if (!isset($this->_config[$name])) {
+            return; // nothing to configure
+        }
+
+        // invoke configuration-functions:
+
+        $param = array($this->_values[$name]);
+
+        foreach ($this->_config[$name] as $config) {
+            $this->_invoke($config, $param);
+        }
+
+        // dispose of configuration-functions:
+
+        unset($this->_config[$name]);
+    }
+
+    /**
      * @internal write-accessor for directly setting configuration-properties
      */
     public function __set($name, $value)
@@ -411,13 +469,13 @@ abstract class Container
             throw new ContainerException('attempted write-access to sealed Container');
         }
 
-        if (array_key_exists($name, $this->_container)) {
-            throw new ContainerException('attempted overwrite of property: $' . $name);
+        if (array_key_exists($name, $this->_init)) {
+            throw new ContainerException('attempted overwrite of registered property: $' . $name);
         }
 
         $this->checkType($name, $value);
 
-        $this->_container[$name] = $value;
+        $this->_values[$name] = $value;
     }
 
     /**
@@ -425,47 +483,18 @@ abstract class Container
      */
     public function __get($name)
     {
-        if (array_key_exists($name, $this->_objects) === false) {
-            // first use - check if sealed:
+        if (! array_key_exists($name, $this->_values)) {
+            // initialization is required - check if sealed:
 
-            if ($this->_sealed === false) {
-                throw new ContainerException('Container must be sealed before properties can be read');
+            if (! $this->_sealed) {
+                throw new ContainerException('Container must be sealed before this property can be initialized');
             }
 
-            // first use - initialize the property:
-
-            if (! array_key_exists($name, $this->_container)) {
-                throw new ContainerException('undefined property: $' . $name);
-            }
-
-            $object = $this->_container[$name];
-
-            if ($object instanceof Closure) {
-                // "unwrap" an object created by a late-construction Closure:
-
-                $object = $this->_invoke($object);
-            }
-
-            $this->checkType($name, $object);
-
-            // apply any configuration-functions:
-
-            if (array_key_exists($name, $this->_config)) {
-                foreach ($this->_config[$name] as $config) {
-                    $this->_invoke($config, array($object));
-                }
-            }
-
-            // store the initialized object:
-
-            $this->_objects[$name] = $object;
-
-            // destroy the late-construction and/or configuration functions:
-
-            unset($this->_config[$name], $this->_container[$name]);
+            $this->_initialize($name);
+            $this->_configure($name);
         }
 
-        return $this->_objects[$name];
+        return $this->_values[$name];
     }
 
     /**
@@ -473,6 +502,6 @@ abstract class Container
      */
     public function __isset($name)
     {
-        return array_key_exists($name, $this->_objects) || array_key_exists($name, $this->_container);
+        return array_key_exists($name, $this->_values) || array_key_exists($name, $this->_init);
     }
 }
