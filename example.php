@@ -29,7 +29,7 @@ class Greeter
  *
  * The @property-annotations below will be parsed and used to configure the container.
  *
- * @property mindplay\stockpile\Greeter $greeter a sample configured object
+ * @property \mindplay\stockpile\Greeter $greeter a sample configured object
  * @property int $time the time of day
  * @property string $mood my current mood
  */

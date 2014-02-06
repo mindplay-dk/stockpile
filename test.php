@@ -29,7 +29,7 @@ class TestContainer extends Container
         $this->register(
             'int',
             function () {
-                return self::EXPECTED_INT;
+                return TestContainer::EXPECTED_INT;
             }
         );
 
@@ -59,7 +59,7 @@ test(
         $c->configure(
             function ($dummy, $int) use (&$got_dependency) {
                 $dummy->configured = true; // late configuration
-                $got_dependency = true; // dependency resolution
+                $got_dependency = ($int === TestContainer::EXPECTED_INT); // dependency resolution
             }
         );
         $c->seal();
