@@ -70,7 +70,7 @@ abstract class Container
     private $_shutdown = array();
 
     /**
-     * @var string the root-path of configuration-files (with trailing directory-separator)
+     * @var string the root-path of configuration-files
      */
     private $_rootPath;
 
@@ -124,7 +124,7 @@ abstract class Container
 
         // configure root-path:
 
-        $this->_rootPath = rtrim($rootPath === null ? getcwd() : $rootPath, '/\\') . DIRECTORY_SEPARATOR;
+        $this->_rootPath = rtrim($rootPath === null ? getcwd() : $rootPath, '/\\');
 
         // initialize:
 
@@ -290,7 +290,7 @@ abstract class Container
     public function load($path)
     {
         if (preg_match(self::ABS_PATH_PATTERN, $path) === 0) {
-            $path = $this->_rootPath . $path;
+            $path = $this->_rootPath . DIRECTORY_SEPARATOR . $path;
         }
 
         if (! file_exists($path)) {
