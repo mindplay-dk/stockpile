@@ -177,6 +177,8 @@ test(
     }
 );
 
+exit(status());
+
 // https://gist.github.com/mindplay-dk/4260582
 
 /**
@@ -190,7 +192,7 @@ function test($name, Closure $function)
     try {
         $function();
     } catch (Exception $e) {
-        echo "\n*** TEST FAILED ***\n\n$e\n";
+        ok("UNEXPECTED EXCEPTION:\n\n$e", false);
     }
 }
 
@@ -205,6 +207,7 @@ function ok($text, $result, $value = null)
         echo "- PASS: $text\n";
     } else {
         echo "# FAIL: $text" . ($value === null ? '' : ' (' . (is_string($value) ? $value : var_export($value, true)) . ')') . "\n";
+        status(false);
     }
 }
 
@@ -238,4 +241,18 @@ function expect($text, $exception_type, Closure $function)
     }
 
     ok("$text (expected exception $exception_type was NOT thrown)", false);
+}
+
+/**
+ * @param bool|null $status test status
+ * @return int number of failures
+ */
+function status($status = null) {
+    static $failures = 0;
+    
+    if ($status === false) {
+        $failures += 1;
+    }
+    
+    return $failures;
 }
