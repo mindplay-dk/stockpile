@@ -3,6 +3,8 @@ stockpile
 
 https://github.com/mindplay-dk/stockpile
 
+[![Build Status](https://travis-ci.org/mindplay-dk/stockpile.png)](https://travis-ci.org/mindplay-dk/stockpile)
+
 This is service/configuration-container for PHP 5.3 attempts to solve a number
 of problems with configuration in general.
 
