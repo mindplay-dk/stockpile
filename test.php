@@ -10,6 +10,18 @@ class TestDummy
     public $configured = false;
 }
 
+class ConsumerDummy
+{
+    public $int;
+
+    public $injected_string;
+
+    public function inject($string)
+    {
+        $this->injected_string = $string;
+    }
+}
+
 /**
  * @property string $string
  * @property int $int
@@ -39,7 +51,7 @@ class TestContainer extends Container
 
 test(
     'Container behavior',
-    function() {
+    function () {
         $c = new TestContainer;
         $dummy = $c->dummy = new TestDummy;
         $c->seal();
@@ -67,6 +79,40 @@ test(
         ok('can perform late initialization', $c->dummy instanceof TestDummy);
         ok('can perform late configuration', $c->dummy->configured);
         ok('can inject dependency', $got_dependency);
+    }
+);
+
+test(
+    'Dependency Injection',
+    function () {
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+        $container->seal();
+
+        $consumer = new ConsumerDummy();
+
+        $container->inject($consumer);
+
+        eq('can inject public property', $container->int, TestContainer::EXPECTED_INT);
+
+        $STRING_OVERRIDE = 'string_override';
+
+        $container->invoke(
+            function ($int, $string) use (&$injected_int, &$injected_string) {
+                $injected_int = $int;
+                $injected_string = $string;
+            },
+            array(
+                'string' => $STRING_OVERRIDE,
+            )
+        );
+
+        eq('can inject argument to closure', $injected_int, TestContainer::EXPECTED_INT);
+        eq('can override argument to closure', $injected_string, $STRING_OVERRIDE);
+
+        $container->invoke(array($consumer, 'inject'));
+
+        eq('can inject argument to method', $consumer->injected_string, TestContainer::EXPECTED_STRING);
     }
 );
 

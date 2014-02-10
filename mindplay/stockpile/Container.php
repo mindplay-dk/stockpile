@@ -17,6 +17,8 @@ use Closure;
 use ReflectionClass;
 use ReflectionProperty;
 use ReflectionFunction;
+use ReflectionMethod;
+use ReflectionFunctionAbstract;
 
 /**
  * Abstract base-class for service/configuration-containers.
@@ -356,6 +358,48 @@ abstract class Container
 
             $class = $class->getParentClass();
         } while ($class !== false);
+    }
+
+    /**
+     * Injects values from this container as arguments to a given function/method/closure.
+     *
+     * @param callable $callable the function/method/closure to invoke
+     * @param array    $params   optional (name=>value) parameters for the call (overrides values in the container)
+     *
+     * @return mixed the return value from the function/method/closure call
+     *
+     * @throws ContainerException if the given argument is not a callable
+     */
+    public function invoke($callable, array $params = array())
+    {
+        if (! is_callable($callable)) {
+            throw new ContainerException("invalid argument: \$callable is not callable");
+        }
+
+        /** @var ReflectionFunctionAbstract $func */
+        $func = is_array($callable)
+            ? new ReflectionMethod($callable[0], $callable[1])
+            : new ReflectionFunction($callable);
+
+        $args = array();
+
+        foreach ($func->getParameters() as $param) {
+            $name = $param->name;
+
+            if (array_key_exists($name, $params)) {
+                $args[] = $params[$name];
+            } else if (isset($this->_types[$name])) {
+                $args[] = $this->__get($name);
+            } else if ($param->isDefaultValueAvailable()) {
+                $args[] = $param->getDefaultValue();
+            } else if ($param->isOptional() || $param->allowsNull()) {
+                $args[] = null;
+            } else {
+                throw new ContainerException("invokation failed: unable to satisfy the argument \${$name}");
+            }
+        }
+
+        return call_user_func_array($callable, $args);
     }
 
     /**
