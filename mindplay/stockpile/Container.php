@@ -181,7 +181,11 @@ abstract class Container
         }
 
         if (array_key_exists($name, $this->_init)) {
-            throw new ContainerException('property: $' . $name . ' has already been registered for initialization');
+            throw new ContainerException('component $' . $name . ' has already been registered for initialization');
+        }
+
+        if (array_key_exists($name, $this->_values)) {
+            throw new ContainerException('component $' . $name . ' has already been initialized by direct assignment');
         }
 
         $this->_init[$name] = $value;
@@ -218,7 +222,7 @@ abstract class Container
         $name = $params[0]->getName();
 
         if (! isset($this->_types[$name])) {
-            throw new ContainerException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
+            throw new ContainerException('undefined component $' . $name . ' (all components must be defined using @property-annotations.)');
         }
 
         // add the configuration-function:
@@ -232,7 +236,7 @@ abstract class Container
 
     /**
      * Add a configuration-function to the container - the function will be called the first
-     * time a configured property is accessed. Configuration-functions are called in the
+     * time a registered component is accessed. Configuration-functions are called in the
      * order in which they were added.
      *
      * @param Closure|Closure[] $config a single configuration-function (a Closure) or an array of functions
@@ -267,7 +271,7 @@ abstract class Container
             $name = $params[0]->getName();
 
             if (! isset($this->_types[$name])) {
-                throw new ContainerException('undefined property: $' . $name . ' (all properties must be defined using @property-annotations.)');
+                throw new ContainerException('undefined component: $' . $name . ' (all components must be defined using @property-annotations.)');
             }
 
             // add the configuration-function:
@@ -319,7 +323,7 @@ abstract class Container
         }
 
         foreach ($this->_values as $name => $value) {
-            $this->_configure($name); // configure components that were directly initialized
+            $this->_configure($name); // configure components that were initialized directly
         }
 
         $this->_sealed = true; // seal container against further changes
@@ -389,7 +393,11 @@ abstract class Container
             if (array_key_exists($name, $params)) {
                 $args[] = $params[$name];
             } else if (isset($this->_types[$name])) {
-                $args[] = $this->__get($name);
+                if ($param->isDefaultValueAvailable() && ! $this->active($name)) {
+                    $args[] = $param->getDefaultValue();
+                } else {
+                    $args[] = $this->__get($name);
+                }
             } else if ($param->isDefaultValueAvailable()) {
                 $args[] = $param->getDefaultValue();
             } else if ($param->isOptional() || $param->allowsNull()) {
@@ -403,13 +411,40 @@ abstract class Container
     }
 
     /**
+     * Check if a given component is active (has been initialized) - this only makes sense
+     * after the Container has been sealed, and will throw if called prematurely.
+     *
+     * @param string $name component name
+     *
+     * @return bool true, if the given component is active (has been initialized)
+     *
+     * @throws ContainerException if this Container has not been sealed
+     */
+    public function active($name)
+    {
+        if (! $this->_sealed) {
+            throw new ContainerException("container must be sealed before this method can be called");
+        }
+
+        return array_key_exists($name, $this->_values);
+    }
+
+    /**
      * Checks that the specified value conforms to the type defined by the
      * <code>@property</code> annotations of the concrete configuration-class.
+     *
+     * @param string $name component name
+     * @param mixed $value value
+     *
+     * @throws ContainerException if the given name is not a valid component name
+     * @throws ContainerException if the given value does not pass a type-check
+     *
+     * @return void
      */
     protected function checkType($name, $value)
     {
         if (! isset($this->_types[$name])) {
-            throw new ContainerException('undefined configuration property $' . $name);
+            throw new ContainerException('undefined component: $' . $name);
         }
 
         $type = $this->_types[$name];
@@ -421,12 +456,12 @@ abstract class Container
         if (array_key_exists($type, self::$checkers) === true) {
             // check a known PHP pseudo-type:
             if (call_user_func(self::$checkers[$type], $value) === false) {
-                throw new ContainerException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException('component-type mismatch - property $' . $name . ' was defined as: ' . $type);
             }
         } else {
             // check a class or interface type:
             if (($value instanceof $type) === false) {
-                throw new ContainerException('property-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException('component-type mismatch - property $' . $name . ' was defined as: ' . $type);
             }
         }
     }
@@ -445,7 +480,15 @@ abstract class Container
 
         foreach ($fn->getParameters() as $index => $param) {
             if (! array_key_exists($index, $params)) {
-                $params[$index] = $this->__get($param->getName());
+                $name = $param->name;
+
+                if ($param->isDefaultValueAvailable() && ! array_key_exists($name, $this->_values)) {
+                    // skip uninitialized optional argument:
+                    $params[$index] = $param->getDefaultValue();
+                } else {
+                    // initialize (as necessary) and fill argument:
+                    $params[$index] = $this->__get($name);
+                }
             }
         }
 
@@ -453,7 +496,7 @@ abstract class Container
     }
 
     /**
-     * Initializes the specified property and any dependencies
+     * Initializes the specified component and any dependencies
      *
      * @param string $name
      *
@@ -462,7 +505,7 @@ abstract class Container
     private function _initialize($name)
     {
         if (! array_key_exists($name, $this->_types)) {
-            throw new ContainerException('undefined property: $' . $name);
+            throw new ContainerException('undefined component: $' . $name);
         }
 
         // run initialization function:
@@ -484,7 +527,7 @@ abstract class Container
     private function _configure($name)
     {
         if (! array_key_exists($name, $this->_values)) {
-            throw new ContainerException("internal error: attempted configured of uninitialized property");
+            throw new ContainerException("internal error: attempted configuration of uninitialized component");
         }
 
         if (!isset($this->_config[$name])) {
@@ -514,7 +557,7 @@ abstract class Container
         }
 
         if (array_key_exists($name, $this->_init)) {
-            throw new ContainerException('attempted overwrite of registered property: $' . $name);
+            throw new ContainerException('attempted overwrite of registered component: $' . $name);
         }
 
         $this->checkType($name, $value);
@@ -531,7 +574,7 @@ abstract class Container
             // initialization is required - check if sealed:
 
             if (! $this->_sealed) {
-                throw new ContainerException('Container must be sealed before this property can be initialized');
+                throw new ContainerException('Container must be sealed before this component can be initialized: $' . $name);
             }
 
             $this->_initialize($name);

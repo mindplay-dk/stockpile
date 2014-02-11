@@ -52,32 +52,34 @@ class TestContainer extends Container
 test(
     'Container behavior',
     function () {
-        $c = new TestContainer;
-        $dummy = $c->dummy = new TestDummy;
-        $c->seal();
+        $container = new TestContainer;
+        $dummy = $container->dummy = new TestDummy;
+        $container->seal();
 
-        eq('can get string', $c->string, TestContainer::EXPECTED_STRING);
-        eq('can get int', $c->int, TestContainer::EXPECTED_INT);
-        eq('can get object', $c->dummy, $dummy);
+        eq('can get string', $container->string, TestContainer::EXPECTED_STRING);
+        eq('correctly reports component as not initialized', $container->active('int'), false);
+        eq('can get int', $container->int, TestContainer::EXPECTED_INT);
+        eq('correctly reports component as initialized', $container->active('int'), true);
+        eq('can get object', $container->dummy, $dummy);
 
-        $c = new TestContainer;
-        $c->register(
+        $container = new TestContainer;
+        $container->register(
             'dummy',
             function () {
                 return new TestDummy;
             }
         );
         $got_dependency = false;
-        $c->configure(
+        $container->configure(
             function ($dummy, $int) use (&$got_dependency) {
                 $dummy->configured = true; // late configuration
                 $got_dependency = ($int === TestContainer::EXPECTED_INT); // dependency resolution
             }
         );
-        $c->seal();
+        $container->seal();
 
-        ok('can perform late initialization', $c->dummy instanceof TestDummy);
-        ok('can perform late configuration', $c->dummy->configured);
+        ok('can perform late initialization', $container->dummy instanceof TestDummy);
+        ok('can perform late configuration', $container->dummy->configured);
         ok('can inject dependency', $got_dependency);
     }
 );
@@ -87,7 +89,24 @@ test(
     function () {
         $container = new TestContainer;
         $container->dummy = new TestDummy;
+
+        $container->configure(
+            function ($string, $int = null) use (&$got_expected_null) {
+                $got_expected_null = ($int === null);
+            }
+        );
+
         $container->seal();
+
+        eq('skips initialization of optional dependency during configuration', $got_expected_null, true);
+
+        $container->invoke(
+            function ($string, $int = null) use (&$expected_null) {
+                $expected_null = $int;
+            }
+        );
+
+        eq('skips initialization of optional dependency on invokation', $expected_null, null);
 
         $consumer = new ConsumerDummy();
 
@@ -121,33 +140,33 @@ test(
     function() {
         $EXPECTED = 'mindplay\stockpile\ContainerException';
 
-        $c = new TestContainer;
+        $container = new TestContainer;
 
         expect(
             'should throw if sealed while incomplete',
             $EXPECTED,
-            function () use ($c) {
-                $c->seal(); // $dummy deliberately left uninitialized
+            function () use ($container) {
+                $container->seal(); // $dummy deliberately left uninitialized
             }
         );
 
-        $c = new TestContainer;
+        $container = new TestContainer;
 
         expect(
             'should throw on attempted access to uninitialized value',
             $EXPECTED,
-            function () use ($c) {
-                $value = $c->int;
+            function () use ($container) {
+                $value = $container->int;
             }
         );
 
-        $c = new TestContainer;
+        $container = new TestContainer;
 
         expect(
             'should throw on attempted access to register twice',
             $EXPECTED,
-            function () use ($c) {
-                $c->register('int',
+            function () use ($container) {
+                $container->register('int',
                     function() {
                         return 456; // will fail because $int is already registered
                     }
@@ -155,69 +174,69 @@ test(
             }
         );
 
-        $c = new TestContainer;
-        $c->dummy = new TestDummy;
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
 
         expect(
             'should throw on attempted to overwrite registered property',
             $EXPECTED,
-            function () use ($c) {
-                $c->int = 456; // will fail because container is sealed
+            function () use ($container) {
+                $container->int = 456; // will fail because container is sealed
             }
         );
 
-        $c = new TestContainer;
-        $c->dummy = new TestDummy;
-        $c->seal();
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+        $container->seal();
 
         expect(
             'should throw on attempted access to sealed container',
             $EXPECTED,
-            function () use ($c) {
-                $c->int = 456; // will fail because container is sealed
+            function () use ($container) {
+                $container->int = 456; // will fail because container is sealed
             }
         );
 
-        $c = new TestContainer;
-        $c->dummy = new TestDummy;
-        $c->seal();
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+        $container->seal();
 
         expect(
             'should throw on attempt to seal container twice',
             $EXPECTED,
-            function () use ($c) {
-                $c->seal();; // will fail because container is already sealed
+            function () use ($container) {
+                $container->seal();; // will fail because container is already sealed
             }
         );
 
-        $c = new TestContainer;
-        $c->dummy = new TestDummy;
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
 
         expect(
             'should throw on attempt to configure an undefined property',
             $EXPECTED,
-            function () use ($c) {
-                $c->configure(function($nonsense) {}); // will fail because container is already sealed
+            function () use ($container) {
+                $container->configure(function($nonsense) {}); // will fail because container is already sealed
             }
         );
 
-        $c = new TestContainer;
+        $container = new TestContainer;
 
         expect(
             'should throw on violation of string type-check',
             $EXPECTED,
-            function () use ($c) {
-                $c->string = 123; // not a string!
+            function () use ($container) {
+                $container->string = 123; // not a string!
             }
         );
 
-        $c = new TestContainer;
+        $container = new TestContainer;
 
         expect(
             'should throw on violation of object type-check',
             $EXPECTED,
-            function () use ($c) {
-                $c->dummy = 'not even an object!';
+            function () use ($container) {
+                $container->dummy = 'not even an object!';
             }
         );
     }
