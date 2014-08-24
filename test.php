@@ -1,7 +1,8 @@
 <?php
 
-require __DIR__ . '/mindplay/stockpile/Container.php';
-require __DIR__ . '/mindplay/stockpile/ContainerException.php';
+/** @var Composer\Autoload\ClassLoader $loader */
+$loader = require __DIR__ . '/vendor/autoload.php';
+$loader->add('mindplay\stockpile', __DIR__);
 
 use mindplay\stockpile\Container;
 
@@ -47,6 +48,10 @@ class TestContainer extends Container
 
         // $dummy deliberately left uninitialized for exception tests
     }
+}
+
+if (coverage()) {
+    coverage('stockpile')->filter()->addDirectoryToWhitelist(__DIR__ . '/mindplay/stockpile');
 }
 
 test(
@@ -242,6 +247,16 @@ test(
     }
 );
 
+if (coverage()) {
+    $report = new PHP_CodeCoverage_Report_Text(10, 90, false, false);
+
+    echo $report->process(coverage(), false);
+
+    $report = new PHP_CodeCoverage_Report_Clover();
+
+    $report->process(coverage(), 'build/logs/clover.xml');
+}
+
 exit(status());
 
 // https://gist.github.com/mindplay-dk/4260582
@@ -306,6 +321,42 @@ function expect($text, $exception_type, Closure $function)
     }
 
     ok("$text (expected exception $exception_type was NOT thrown)", false);
+}
+
+/**
+ * @param string|null $text description (to start coverage); or null (to stop coverage)
+ * @return PHP_CodeCoverage|null
+ */
+function coverage($text = null)
+{
+    static $coverage = null;
+    static $running = false;
+
+    if ($coverage === false) {
+        return null; // code coverage unavailable
+    }
+
+    if ($coverage === null) {
+        try {
+            $coverage = new PHP_CodeCoverage;
+        } catch (PHP_CodeCoverage_Exception $e) {
+            echo "# Notice: no code coverage run-time available\n";
+            $coverage = false;
+            return null;
+        }
+    }
+
+    if (is_string($text)) {
+        $coverage->start($text);
+        $running = true;
+    } else {
+        if ($running) {
+            $coverage->stop();
+            $running = false;
+        }
+    }
+
+    return $coverage;
 }
 
 /**
