@@ -68,24 +68,40 @@ test(
         eq('can get object', $container->dummy, $dummy);
 
         $container = new TestContainer;
+
         $container->register(
             'dummy',
             function () {
                 return new TestDummy;
             }
         );
+
         $got_dependency = false;
+
         $container->configure(
             function ($dummy, $int) use (&$got_dependency) {
                 $dummy->configured = true; // late configuration
                 $got_dependency = ($int === TestContainer::EXPECTED_INT); // dependency resolution
             }
         );
+
+        $shut_down = false;
+
+        $container->shutdown(
+            function ($dummy) use (&$shut_down) {
+                $shut_down = true;
+            }
+        );
+
         $container->seal();
 
         ok('can perform late initialization', $container->dummy instanceof TestDummy);
         ok('can perform late configuration', $container->dummy->configured);
         ok('can inject dependency', $got_dependency);
+
+        unset($container); // triggers shutdown function, setting $shut_down to true
+
+        ok('can perform shutdown function', $shut_down === true);
     }
 );
 
@@ -248,7 +264,7 @@ test(
 );
 
 if (coverage()) {
-    $report = new PHP_CodeCoverage_Report_Text(10, 90, false, false);
+    $report = new PHP_CodeCoverage_Report_Text(50, 90, false, false);
 
     echo $report->process(coverage(), false);
 
