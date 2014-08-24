@@ -1,6 +1,15 @@
 <?php
 
-/** @var Composer\Autoload\ClassLoader $loader */
+namespace test;
+
+use Closure;
+use Exception;
+
+use PHP_CodeCoverage;
+use PHP_CodeCoverage_Report_Text;
+use PHP_CodeCoverage_Report_Clover;
+
+/** @var \Composer\Autoload\ClassLoader $loader */
 $loader = require __DIR__ . '/vendor/autoload.php';
 $loader->add('mindplay\stockpile', __DIR__);
 
