@@ -113,9 +113,8 @@ abstract class Container
             throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
         }
 
-        for ($i = 0; $i < count($matches[0]); $i ++) {
+        foreach ($matches[2] as $i => $name) {
             $type = $matches[1][$i];
-            $name = $matches[2][$i];
 
             if (substr_compare($type, '[]', - 2) === 0) {
                 $type = 'array'; // shallow type-checking for array-types
