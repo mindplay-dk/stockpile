@@ -4,9 +4,44 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "35038b91b4a3e756ead378d7034805f0",
+    "hash": "5f8be9f0f8ca1d9aeb670e1ddb8ec018",
     "packages": [
-
+        {
+            "name": "mindplay/filereflection",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mindplay-dk/filereflection.git",
+                "reference": "4e16b66d566f05c8687705408662094483848c0d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mindplay-dk/filereflection/zipball/4e16b66d566f05c8687705408662094483848c0d",
+                "reference": "4e16b66d566f05c8687705408662094483848c0d",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "mindplay\\filereflection": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-3.0+"
+            ],
+            "authors": [
+                {
+                    "name": "Rasmus Schultz",
+                    "email": "rasmus@mindplay.dk"
+                }
+            ],
+            "description": "Complements the PHP reflection API with the missing ReflectionFile class",
+            "time": "2014-08-24 12:44:02"
+        }
     ],
     "packages-dev": [
         {
@@ -304,6 +339,7 @@
     "stability-flags": {
         "phpunit/php-code-coverage": 20
     },
+    "prefer-stable": false,
     "platform": {
         "php": ">=5.3.0"
     },

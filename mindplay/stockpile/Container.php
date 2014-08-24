@@ -20,6 +20,8 @@ use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionFunctionAbstract;
 
+use mindplay\filereflection\ReflectionFile;
+
 /**
  * Abstract base-class for service/configuration-containers.
  */
@@ -113,8 +115,10 @@ abstract class Container
             throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
         }
 
+        $file = new ReflectionFile($class->getFileName());
+
         foreach ($matches[2] as $i => $name) {
-            $type = $matches[1][$i];
+            $type = $file->resolveName($matches[1][$i]);
 
             if (substr_compare($type, '[]', - 2) === 0) {
                 $type = 'array'; // shallow type-checking for array-types
