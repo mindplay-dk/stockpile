@@ -344,27 +344,23 @@ abstract class Container
     {
         $class = new ReflectionClass(get_class($object));
 
-        do {
-            $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
+        $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
 
-            foreach ($properties as $property) {
-                if (! $this->__isset($property->getName())) {
-                    continue; // no value with that name exists in this container
-                }
-
-                if ($property->isProtected()) {
-                    if ($protected === true) {
-                        $property->setAccessible(true);
-                    } else {
-                        continue; // skip protected property
-                    }
-                }
-
-                $property->setValue($object, $this->__get($property->getName()));
+        foreach ($properties as $property) {
+            if (! $this->__isset($property->getName())) {
+                continue; // no value with that name exists in this container
             }
 
-            $class = $class->getParentClass();
-        } while ($class !== false);
+            if ($property->isProtected()) {
+                if ($protected === true) {
+                    $property->setAccessible(true);
+                } else {
+                    continue; // skip protected property
+                }
+            }
+
+            $property->setValue($object, $this->__get($property->getName()));
+        }
     }
 
     /**
