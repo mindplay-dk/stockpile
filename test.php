@@ -6,6 +6,7 @@ use Closure;
 use Exception;
 
 use PHP_CodeCoverage;
+use PHP_CodeCoverage_Exception;
 use PHP_CodeCoverage_Report_Text;
 use PHP_CodeCoverage_Report_Clover;
 
