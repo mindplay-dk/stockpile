@@ -20,8 +20,6 @@ use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionFunctionAbstract;
 
-use mindplay\filereflection\ReflectionFile;
-
 /**
  * Abstract base-class for service/configuration-containers.
  */

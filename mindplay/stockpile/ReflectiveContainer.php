@@ -13,12 +13,7 @@
 
 namespace mindplay\stockpile;
 
-use Closure;
 use ReflectionClass;
-use ReflectionProperty;
-use ReflectionFunction;
-use ReflectionMethod;
-use ReflectionFunctionAbstract;
 
 use mindplay\filereflection\ReflectionFile;
 
