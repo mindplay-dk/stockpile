@@ -28,11 +28,6 @@ use mindplay\filereflection\ReflectionFile;
 abstract class Container
 {
     /**
-     * Regular expression used by the constructor to parse @property-annotations
-     */
-    const PROPERTY_PATTERN = '/^\s*\*+\s*\@property(?:\-read|\-write|)\s+([\w\\\\]+(?:\\[\\]|))\s+\$(\w+)/im';
-
-    /**
      * Regular expression used to determine if a path is absolute.
      *
      * @see load()
@@ -40,27 +35,27 @@ abstract class Container
     const ABS_PATH_PATTERN = '/^(?:\/|\\\\|\w\:\\\\).*$/';
 
     /**
-     * @var array map of property-names to type-names (parsed from PHP-DOC block)
+     * @var array map of component-names to type-names
      */
     private $_types = array();
 
     /**
-     * @var Closure[] map of property-names to initialization closures
+     * @var Closure[] map of component-names to initialization closures
      * @see register()
      */
     private $_init = array();
 
     /**
-     * @var Closure[] map of property-names to additional (late) configuration-functions
+     * @var Closure[] map of component-names to additional (late) configuration-functions
      * @see configure()
      */
     private $_config = array();
 
     /**
-     * @var array map of property-names to initialized objects/values
-     * @see __get()
+     * @var array map of component-names to initialized objects/values
+     * @see get()
      */
-    private $_values = array();
+    protected $_values = array();
 
     /**
      * @var bool true if the container has been sealed
@@ -68,7 +63,7 @@ abstract class Container
     private $_sealed = false;
 
     /**
-     * @var Closure[] map where property_name => Closure[] (list of closures to invoke
+     * @var Closure[] map where component-name => Closure[] (list of closures to invoke
      *            when the container is destroyed)
      */
     private $_shutdown = array();
@@ -99,41 +94,19 @@ abstract class Container
     );
 
     /**
-     * Initializes the container by parsing <code>@property</code> annotations of the concrete class.
+     * Initializes the container by calling the concrete init() implementation.
      *
      * @param string $rootPath the root-path of configuration-files, which can be loaded using {@see load()}
-     *
-     * @throws ContainerException if the container has no @property-annotations
      */
     public function __construct($rootPath = null)
     {
-        // parse @property-annotations for property-names and types:
-
-        $class = new ReflectionClass(get_class($this));
-
-        if (preg_match_all(self::PROPERTY_PATTERN, $class->getDocComment(), $matches) === 0) {
-            throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
-        }
-
-        $file = new ReflectionFile($class->getFileName());
-
-        foreach ($matches[2] as $i => $name) {
-            $type = $file->resolveName($matches[1][$i]);
-
-            if (substr_compare($type, '[]', - 2) === 0) {
-                $type = 'array'; // shallow type-checking for array-types
-            }
-
-            $this->_types[$name] = $type;
-        }
-
         // configure root-path:
 
         $this->_rootPath = rtrim($rootPath === null ? getcwd() : $rootPath, '/\\');
 
         // initialize:
 
-        $this->init();
+        $this->_init();
     }
 
     /**
@@ -162,14 +135,20 @@ abstract class Container
     }
 
     /**
-     * Initialize the container after construction. Override as needed.
+     * Initialize the container after construction.
      */
-    protected function init()
+    protected function _init()
     {
+        $this->init();
     }
 
     /**
-     * Registers a Closure that initializes the service/component/property with the given name.
+     * Userland container initialization.
+     */
+    abstract protected function init();
+
+    /**
+     * Registers a Closure that initializes the component with the given name.
      *
      * @param string  $name    name of component to register.
      * @param Closure $value   an object or value of the type required for the specified component,
@@ -184,11 +163,11 @@ abstract class Container
         }
 
         if (array_key_exists($name, $this->_init)) {
-            throw new ContainerException('component $' . $name . ' has already been registered for initialization');
+            throw new ContainerException("component '{$name}' has already been registered for initialization");
         }
 
         if (array_key_exists($name, $this->_values)) {
-            throw new ContainerException('component $' . $name . ' has already been initialized by direct assignment');
+            throw new ContainerException("component '{$name}' has already been initialized by direct assignment");
         }
 
         $this->_init[$name] = $value;
@@ -225,7 +204,7 @@ abstract class Container
         $name = $params[0]->getName();
 
         if (! isset($this->_types[$name])) {
-            throw new ContainerException('undefined component $' . $name . ' (all components must be defined using @property-annotations.)');
+            throw new ContainerException("undefined component '{$name}' - all components must be defined using define()");
         }
 
         // add the configuration-function:
@@ -274,7 +253,7 @@ abstract class Container
             $name = $params[0]->getName();
 
             if (! isset($this->_types[$name])) {
-                throw new ContainerException('undefined component: $' . $name . ' (all components must be defined using @property-annotations.)');
+                throw new ContainerException("undefined component '{$name}' - all components must be defined using define()");
             }
 
             // add the configuration-function:
@@ -333,9 +312,9 @@ abstract class Container
     }
 
     /**
-     * Injects values from this container into the given object - optionally, you can
+     * Injects values from this container into object properties - optionally, you can
      * have values injected into protected properties, but by default, only public
-     * properties are populated; private properties are never injected.
+     * properties are injected; private properties are never injected.
      *
      * @param object $object    the object to populate using values from this container.
      * @param bool   $protected if true, protected properties will also be injected.
@@ -359,7 +338,7 @@ abstract class Container
                 }
             }
 
-            $property->setValue($object, $this->__get($property->getName()));
+            $property->setValue($object, $this->get($property->getName()));
         }
     }
 
@@ -395,7 +374,7 @@ abstract class Container
                 if ($param->isDefaultValueAvailable() && ! $this->active($name)) {
                     $args[] = $param->getDefaultValue();
                 } else {
-                    $args[] = $this->__get($name);
+                    $args[] = $this->get($name);
                 }
             } else if ($param->isDefaultValueAvailable()) {
                 $args[] = $param->getDefaultValue();
@@ -429,8 +408,92 @@ abstract class Container
     }
 
     /**
-     * Checks that the specified value conforms to the type defined by the
-     * <code>@property</code> annotations of the concrete configuration-class.
+     * Initialize and configure a component (as needed) and return it.
+     *
+     * @param string $name name of component to return
+     *
+     * @return mixed the component
+     *
+     * @throws ContainerException on attempt to get an uninitialized component prior to sealing the container
+     */
+    public function get($name)
+    {
+        if (! array_key_exists($name, $this->_values)) {
+            // initialization is required - check if sealed:
+
+            if (! $this->_sealed) {
+                throw new ContainerException('Container must be sealed before this component can be initialized: ' . $name);
+            }
+
+            $this->_initialize($name);
+            $this->_configure($name);
+        }
+
+        return $this->_values[$name];
+    }
+
+    /**
+     * Directly initialize a component.
+     *
+     * @param string $name  name of component to initialize
+     * @param mixed  $value component
+     *
+     * @throws ContainerException on attempted write-access to a sealed container,
+     *                            on attempted overwrite of already-registered component
+     */
+    public function set($name, $value)
+    {
+        if ($this->_sealed === true) {
+            throw new ContainerException('attempted write-access to sealed Container');
+        }
+
+        if (array_key_exists($name, $this->_init)) {
+            throw new ContainerException("attempted overwrite of registered component: '{$name}'");
+        }
+
+        $this->checkType($name, $value);
+
+        $this->_values[$name] = $value;
+    }
+
+    /**
+     * Define a component and it's type.
+     *
+     * @param string $name component name
+     * @param string $type fully-qualified class/interface name
+     *
+     * @throws ContainerException no attempted redefinition of an already-defined component
+     */
+    protected function define($name, $type)
+    {
+        if (isset($this->_types[$name])) {
+            throw new ContainerException(
+                "attempted redefinition of component '{$name}' as: {$type}"
+                . " - component previously defined as: {$this->_types[$name]}"
+            );
+        }
+
+        if (substr_compare($type, '[]', - 2) === 0) {
+            $type = 'array'; // shallow type-checking for array-types
+        }
+
+        $this->_types[$name] = $type;
+    }
+
+    /**
+     * @param string $name component name
+     *
+     * @return bool true, if a component with the given name has been defined
+     *
+     * @see define()
+     */
+    protected function defined($name)
+    {
+        return array_key_exists($name, $this->_values) || array_key_exists($name, $this->_init);
+    }
+
+    /**
+     * Checks that the specified value conforms to the type defined with define()
      *
      * @param string $name component name
      * @param mixed $value value
@@ -443,7 +506,7 @@ abstract class Container
     protected function checkType($name, $value)
     {
         if (! isset($this->_types[$name])) {
-            throw new ContainerException('undefined component: $' . $name);
+            throw new ContainerException("undefined component: '{$name}'");
         }
 
         $type = $this->_types[$name];
@@ -455,12 +518,12 @@ abstract class Container
         if (array_key_exists($type, self::$checkers) === true) {
             // check a known PHP pseudo-type:
             if (call_user_func(self::$checkers[$type], $value) === false) {
-                throw new ContainerException('component-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException("component-type mismatch - component '{$name}' was defined as: {$type}");
             }
         } else {
             // check a class or interface type:
             if (($value instanceof $type) === false) {
-                throw new ContainerException('component-type mismatch - property $' . $name . ' was defined as: ' . $type);
+                throw new ContainerException("component-type mismatch - component '{$name}' was defined as: {$type}");
             }
         }
     }
@@ -486,7 +549,7 @@ abstract class Container
                     $params[$index] = $param->getDefaultValue();
                 } else {
                     // initialize (as necessary) and fill argument:
-                    $params[$index] = $this->__get($name);
+                    $params[$index] = $this->get($name);
                 }
             }
         }
@@ -504,7 +567,7 @@ abstract class Container
     private function _initialize($name)
     {
         if (! array_key_exists($name, $this->_types)) {
-            throw new ContainerException('undefined component: $' . $name);
+            throw new ContainerException("undefined component '{$name}'");
         }
 
         // run initialization function:
@@ -544,50 +607,5 @@ abstract class Container
         // dispose of configuration-functions:
 
         unset($this->_config[$name]);
-    }
-
-    /**
-     * @internal write-accessor for directly setting configuration-properties
-     */
-    public function __set($name, $value)
-    {
-        if ($this->_sealed === true) {
-            throw new ContainerException('attempted write-access to sealed Container');
-        }
-
-        if (array_key_exists($name, $this->_init)) {
-            throw new ContainerException('attempted overwrite of registered component: $' . $name);
-        }
-
-        $this->checkType($name, $value);
-
-        $this->_values[$name] = $value;
-    }
-
-    /**
-     * @internal read-accessor for component properties
-     */
-    public function __get($name)
-    {
-        if (! array_key_exists($name, $this->_values)) {
-            // initialization is required - check if sealed:
-
-            if (! $this->_sealed) {
-                throw new ContainerException('Container must be sealed before this component can be initialized: $' . $name);
-            }
-
-            $this->_initialize($name);
-            $this->_configure($name);
-        }
-
-        return $this->_values[$name];
-    }
-
-    /**
-     * @internal isset() overloading for properties
-     */
-    public function __isset($name)
-    {
-        return array_key_exists($name, $this->_values) || array_key_exists($name, $this->_init);
     }
 }

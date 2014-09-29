@@ -15,6 +15,7 @@ $loader = require __DIR__ . '/vendor/autoload.php';
 $loader->add('mindplay\stockpile', __DIR__);
 
 use mindplay\stockpile\Container;
+use mindplay\stockpile\ReflectiveContainer;
 
 class TestDummy
 {
@@ -38,7 +39,7 @@ class ConsumerDummy
  * @property int $int
  * @property TestDummy $dummy
  */
-class TestContainer extends Container
+class TestContainer extends ReflectiveContainer
 {
     const EXPECTED_STRING = 'hello world';
     const EXPECTED_INT = 123;
