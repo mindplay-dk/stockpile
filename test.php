@@ -14,7 +14,6 @@ use PHP_CodeCoverage_Report_Clover;
 $loader = require __DIR__ . '/vendor/autoload.php';
 $loader->add('mindplay\stockpile', __DIR__);
 
-use mindplay\stockpile\Container;
 use mindplay\stockpile\ReflectiveContainer;
 
 class TestDummy

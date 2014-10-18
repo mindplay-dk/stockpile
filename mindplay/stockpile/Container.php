@@ -39,12 +39,15 @@ abstract class Container
 
     /**
      * @var Closure[] map of component-names to initialization closures
+     *
      * @see register()
      */
     private $_init = array();
 
     /**
-     * @var Closure[] map of component-names to additional (late) configuration-functions
+     * @var (Closure[])[] additional (late) configuration-functions.
+     *                    map where component-name => Closure[]
+     *
      * @see configure()
      */
     private $_config = array();
@@ -61,13 +64,17 @@ abstract class Container
     private $_sealed = false;
 
     /**
-     * @var Closure[] map where component-name => Closure[] (list of closures to invoke
-     *            when the container is destroyed)
+     * @var (Closure[])[] list of closures to invoke when the container is destroyed.
+     *                    map where component-name => Closure[]
+     *
+     * @see shutdown()
      */
     private $_shutdown = array();
 
     /**
      * @var string the root-path of configuration-files
+     *
+     * @see load()
      */
     private $_rootPath;
 
@@ -148,13 +155,13 @@ abstract class Container
     /**
      * Registers a Closure that initializes the component with the given name.
      *
-     * @param string  $name    name of component to register.
-     * @param Closure $value   an object or value of the type required for the specified component,
-     *                         or a closure that creates and returns such an object or value.
+     * @param string  $name name of component to register.
+     * @param Closure $init a closure that creates and returns an object or value
+     *                      of the type defined for the specified component
      *
      * @throws ContainerException
      */
-    public function register($name, Closure $value)
+    public function register($name, Closure $init)
     {
         if ($this->_sealed === true) {
             throw new ContainerException('attempted access to sealed configuration container');
@@ -168,7 +175,21 @@ abstract class Container
             throw new ContainerException("component '{$name}' has already been initialized by direct assignment");
         }
 
-        $this->_init[$name] = $value;
+        $this->_init[$name] = $init;
+    }
+
+    /**
+     * Add a configuration-function to the container - the function will be called the first
+     * time a registered component is accessed. Configuration-functions are called in the
+     * order in which they were added.
+     *
+     * @param Closure|Closure[] $config a single configuration-function (a Closure) or an array of functions
+     *
+     * @throws ContainerException
+     */
+    public function configure($config)
+    {
+        $this->_register((array) $config, $this->_config);
     }
 
     /**
@@ -189,89 +210,19 @@ abstract class Container
      */
     public function shutdown(Closure $function)
     {
-        // check parameters:
-
-        $fn = new ReflectionFunction($function);
-
-        $params = $fn->getParameters();
-
-        if (count($params) === 0) {
-            throw new ContainerException('shutdown-functions must have at least one parameter');
-        }
-
-        $name = $params[0]->getName();
-
-        if (! isset($this->_types[$name])) {
-            throw new ContainerException("undefined component '{$name}' - all components must be defined using define()");
-        }
-
-        // add the configuration-function:
-
-        if (! array_key_exists($name, $this->_shutdown)) {
-            $this->_shutdown[$name] = array();
-        }
-
-        $this->_shutdown[$name][] = $function;
+        $this->_register((array) $function, $this->_shutdown);
     }
 
     /**
-     * Add a configuration-function to the container - the function will be called the first
-     * time a registered component is accessed. Configuration-functions are called in the
-     * order in which they were added.
+     * Load a php configuration-file.
      *
-     * @param Closure|Closure[] $config a single configuration-function (a Closure) or an array of functions
+     * A configuration-file is simply a php-script running in this Container's `$this` context.
      *
-     * @throws ContainerException
-     */
-    public function configure($config)
-    {
-        if ($this->_sealed === true) {
-            throw new ContainerException('attempted configuration of sealed Container');
-        }
-
-        if (! is_array($config)) {
-            $config = array($config);
-        }
-
-        foreach ($config as $index => $function) {
-            if (! ($function instanceof Closure)) {
-                throw new ContainerException('parameter #' . $index . ' is not a Closure');
-            }
-
-            // obtain the first parameter-name:
-
-            $fn = new ReflectionFunction($function);
-
-            $params = $fn->getParameters();
-
-            if (count($params) === 0) {
-                throw new ContainerException('configuration-functions must have at least one parameter');
-            }
-
-            $name = $params[0]->getName();
-
-            if (! isset($this->_types[$name])) {
-                throw new ContainerException("undefined component '{$name}' - all components must be defined using define()");
-            }
-
-            // add the configuration-function:
-
-            if (! array_key_exists($name, $this->_config)) {
-                $this->_config[$name] = array();
-            }
-
-            $this->_config[$name][] = $function;
-        }
-    }
-
-    /**
-     * Load a configuration-file.
+     * @param string $path an absolute path to the configuration-file; or a relative path to {@see getRootPath()}
      *
-     * (a configuration-file is simply a php-script running in an isolated function-context.)
+     * @return mixed return value from the loaded php script, if any
      *
-     * @param string $path either an absolute path to the configuration-file, or relative to {@see $rootPath}
-     *
-     * @throws ContainerException
+     * @throws ContainerException if the specific field
      */
     public function load($path)
     {
@@ -283,7 +234,7 @@ abstract class Container
             throw new ContainerException('configuration file not found: ' . $path);
         }
 
-        require $path;
+        return require $path;
     }
 
     /**
@@ -399,7 +350,7 @@ abstract class Container
     public function active($name)
     {
         if (! $this->_sealed) {
-            throw new ContainerException("container must be sealed before this method can be called");
+            throw new ContainerException("Container must be sealed before this method can be called");
         }
 
         return array_key_exists($name, $this->_values);
@@ -460,7 +411,7 @@ abstract class Container
      * @param string $name component name
      * @param string $type fully-qualified class/interface name
      *
-     * @throws ContainerException no attempted redefinition of an already-defined component
+     * @throws ContainerException on attempted redefinition of an already-defined component
      */
     protected function define($name, $type)
     {
@@ -485,9 +436,22 @@ abstract class Container
      *
      * @see define()
      */
-    protected function defined($name)
+    public function defined($name)
     {
-        return array_key_exists($name, $this->_values) || array_key_exists($name, $this->_init);
+        return isset($this->_types[$name]);
+    }
+
+    /**
+     * @param string $name component name
+     *
+     * @return bool true, if a component with the given name has been registered (or initialized directly)
+     *
+     * @see register()
+     * @see set()
+     */
+    protected function registered($name)
+    {
+        return array_key_exists($name, $this->_init) || array_key_exists($name, $this->_values);
     }
 
     /**
@@ -527,7 +491,7 @@ abstract class Container
     }
 
     /**
-     * Invokes a Closure, automatically filling in any missing parameters using configured properties.
+     * Invokes a Closure, automatically filling in any missing parameters using configured components.
      *
      * @param Closure $closure the Closure to invoke
      * @param array   $params  parameters that have already been determined; optional
@@ -605,5 +569,46 @@ abstract class Container
         // dispose of configuration-functions:
 
         unset($this->_config[$name]);
+    }
+
+    /**
+     * @param Closure[] $functions list of functions to register
+     * @param Closure[] &$registry the registry to which to append
+     *
+     * @throws ContainerException
+     */
+    private function _register($functions, &$registry)
+    {
+        if ($this->_sealed === true) {
+            throw new ContainerException('attempted configuration of sealed Container');
+        }
+
+        foreach ($functions as $function) {
+            // verify parameter names:
+
+            $fn = new ReflectionFunction($function);
+
+            $params = $fn->getParameters();
+
+            if (count($params) === 0) {
+                throw new ContainerException('configuration-functions must have at least one parameter');
+            }
+
+            foreach ($params as $param) {
+                if (! isset($this->_types[$param->getName()])) {
+                    throw new ContainerException("undefined component '{$param->getName()}' - all components must be defined using define()");
+                }
+            }
+
+            // add the configuration-function:
+
+            $name = $params[0]->getName();
+
+            if (! array_key_exists($name, $registry)) {
+                $registry[$name] = array();
+            }
+
+            $registry[$name][] = $function;
+        }
     }
 }

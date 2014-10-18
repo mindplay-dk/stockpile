@@ -74,6 +74,6 @@ abstract class ReflectiveContainer extends Container
      */
     public function __isset($name)
     {
-        return $this->defined($name);
+        return $this->registered($name);
     }
 }

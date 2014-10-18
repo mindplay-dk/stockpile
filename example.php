@@ -1,9 +1,12 @@
 <?php
 
-namespace mindplay\stockpile;
+namespace mindplay\stockpile\example;
 
-require './mindplay/stockpile/Container.php';
-require './mindplay/stockpile/ContainerException.php';
+use mindplay\stockpile\ReflectiveContainer;
+
+/** @var \Composer\Autoload\ClassLoader $loader */
+$loader = require __DIR__ . '/vendor/autoload.php';
+$loader->add('mindplay\stockpile', __DIR__);
 
 // ===== EXAMPLE =====
 
@@ -29,35 +32,38 @@ class Greeter
  *
  * The @property-annotations below will be parsed and used to configure the container.
  *
- * @property \mindplay\stockpile\Greeter $greeter a sample configured object
- * @property int $time the time of day
- * @property string $mood my current mood
+ * @property Greeter $greeter a sample configured object
+ * @property int     $time    the time of day
+ * @property string  $mood    my current mood
  */
-class MyConfig extends Container
-{}
+class MyContainer extends ReflectiveContainer
+{
+    protected function init()
+    {
+        // use an anonymous closure to configure a property for late construction:
 
-$config = new MyConfig;
+        $this->register('greeter', function($time) {
+            // the $time configuration-value is automatically injected
+            $g = new Greeter;
 
-// use an anonymous closure to configure a property for late construction:
+            $g->day = date('l', $time);
 
-$config->register('greeter', function($time) {
-    // the $time configuration-value is automatically injected
-    $g = new Greeter;
+            return $g;
+        });
 
-    $g->day = date('l', $time);
+        // property-types must match those defined in the @property-annotations above:
 
-    return $g;
-});
+        $this->time = time(); // ... setting this to a string would cause an exception
 
-// property-types must match those defined in the @property-annotations above:
+        $this->mood = 'happy';
+    }
+}
 
-$config->time = time(); // ... setting this to a string would cause an exception
-
-$config->mood = 'happy';
+$container = new MyContainer;
 
 // properties using late construction can be configured using a callback-method:
 
-$config->configure(function(Greeter $greeter, $mood) {
+$container->configure(function(Greeter $greeter, $mood) {
     // the parameter-name (greeter) defines the property to be configured
     // the $mood configuration-value is automatically injected
     $greeter->name = 'World';
@@ -66,9 +72,11 @@ $config->configure(function(Greeter $greeter, $mood) {
 
 // configuration container must be sealed before properties can be read:
 
-$config->seal();
+$container->seal();
 
-$config->greeter->sayHello();
+// components in the container can now be consumed:
+
+$container->greeter->sayHello();
 
 // we can also inject values into public object properties:
 
@@ -89,7 +97,7 @@ class Bar extends Foo
 
 $foo = new Bar();
 
-$config->inject($foo);
+$container->inject($foo);
 
 echo "\ninjected time: {$foo->time}";
 echo "\nmood: ".$foo->getMood();
