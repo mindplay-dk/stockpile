@@ -14,8 +14,6 @@
 namespace mindplay\stockpile;
 
 use Closure;
-use ReflectionClass;
-use ReflectionProperty;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionFunctionAbstract;
@@ -202,9 +200,9 @@ abstract class AbstractContainer
      *
      * Shutdown-functions are run in the order they are added.
      *
-     * @param Closure $function shutdown-function with parameter-names corresponding to
-     *                          the names of configured components - the first parameter
-     *                          specifies which component triggers the shutdown-function.
+     * @param Closure|Closure[] $function shutdown-function with parameter-names corresponding to
+     *                                    the names of configured components - the first parameter
+     *                                    specifies which component triggers the shutdown-function.
      *
      * @throws ContainerException
      */
