@@ -2,7 +2,7 @@
 
 namespace mindplay\stockpile\example;
 
-use mindplay\stockpile\ReflectiveContainer;
+use mindplay\stockpile\Container;
 
 /** @var \Composer\Autoload\ClassLoader $loader */
 $loader = require __DIR__ . '/vendor/autoload.php';
@@ -36,7 +36,7 @@ class Greeter
  * @property int     $time    the time of day
  * @property string  $mood    my current mood
  */
-class MyContainer extends ReflectiveContainer
+class MyContainer extends Container
 {
     protected function init()
     {

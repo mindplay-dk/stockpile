@@ -14,7 +14,7 @@ use PHP_CodeCoverage_Report_Clover;
 $loader = require __DIR__ . '/vendor/autoload.php';
 $loader->add('mindplay\stockpile', __DIR__);
 
-use mindplay\stockpile\ReflectiveContainer;
+use mindplay\stockpile\Container;
 
 class TestDummy
 {
@@ -38,7 +38,7 @@ class ConsumerDummy
  * @property int $int
  * @property TestDummy $dummy
  */
-class TestContainer extends ReflectiveContainer
+class TestContainer extends Container
 {
     const EXPECTED_STRING = 'hello world';
     const EXPECTED_INT = 123;
