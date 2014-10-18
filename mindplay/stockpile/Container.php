@@ -334,7 +334,7 @@ abstract class Container
      *
      * @throws ContainerException on attempt to get an uninitialized component prior to sealing the container
      */
-    public function get($name)
+    protected function get($name)
     {
         if (! array_key_exists($name, $this->_values)) {
             // initialization is required - check if sealed:
@@ -359,7 +359,7 @@ abstract class Container
      * @throws ContainerException on attempted write-access to a sealed container,
      *                            on attempted overwrite of already-registered component
      */
-    public function set($name, $value)
+    protected function set($name, $value)
     {
         if ($this->_sealed === true) {
             throw new ContainerException('attempted write-access to sealed Container');
