@@ -261,37 +261,6 @@ abstract class Container
     }
 
     /**
-     * Injects values from this container into object properties - optionally, you can
-     * have values injected into protected properties, but by default, only public
-     * properties are injected; private properties are never injected.
-     *
-     * @param object $object    the object to populate using values from this container.
-     * @param bool   $protected if true, protected properties will also be injected.
-     */
-    public function inject($object, $protected = false)
-    {
-        $class = new ReflectionClass(get_class($object));
-
-        $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
-
-        foreach ($properties as $property) {
-            if (! $this->__isset($property->getName())) {
-                continue; // no value with that name exists in this container
-            }
-
-            if ($property->isProtected()) {
-                if ($protected === true) {
-                    $property->setAccessible(true);
-                } else {
-                    continue; // skip protected property
-                }
-            }
-
-            $property->setValue($object, $this->get($property->getName()));
-        }
-    }
-
-    /**
      * Injects values from this container as arguments to a given function/method/closure.
      *
      * @param callable $callable the function/method/closure to invoke

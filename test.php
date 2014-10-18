@@ -141,10 +141,6 @@ test(
 
         $consumer = new ConsumerDummy();
 
-        $container->inject($consumer);
-
-        eq('can inject public property', $container->int, TestContainer::EXPECTED_INT);
-
         $STRING_OVERRIDE = 'string_override';
 
         $container->invoke(

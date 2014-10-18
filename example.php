@@ -77,27 +77,3 @@ $container->seal();
 // components in the container can now be consumed:
 
 $container->greeter->sayHello();
-
-// we can also inject values into public object properties:
-
-class Foo
-{
-    public $time;
-}
-
-class Bar extends Foo
-{
-    private $mood='unaffected';
-
-    public function getMood()
-    {
-        return $this->mood;
-    }
-}
-
-$foo = new Bar();
-
-$container->inject($foo);
-
-echo "\ninjected time: {$foo->time}";
-echo "\nmood: ".$foo->getMood();
