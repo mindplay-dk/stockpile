@@ -37,11 +37,13 @@ class ConsumerDummy
  * @property string $string
  * @property int $int
  * @property TestDummy $dummy
+ * @property string $loaded
  */
 class TestContainer extends Container
 {
     const EXPECTED_STRING = 'hello world';
     const EXPECTED_INT = 123;
+    const EXPECTED_LOADED = 'loaded';
 
     protected function init()
     {
@@ -56,6 +58,10 @@ class TestContainer extends Container
             }
         );
 
+        // $loaded initialized as null for load() test:
+
+        $this->loaded = null;
+
         // $dummy deliberately left uninitialized for exception tests
     }
 }
@@ -68,16 +74,35 @@ test(
     'Container behavior',
     function () {
         $container = new TestContainer;
+
+        eq('correctly reports component as defined', $container->isDefined('dummy'), true);
+        eq('correctly reports component as not defined', $container->isDefined('bunk'), false);
+        eq('correctly reports component as not registered', $container->isRegistered('dummy'), false);
+
         $dummy = $container->dummy = new TestDummy;
+
+        eq('correctly reports component as registered', $container->isRegistered('dummy'), true);
+
         $container->seal();
 
+        eq('can get root path', $container->getRootPath(), getcwd());
         eq('can get string', $container->string, TestContainer::EXPECTED_STRING);
-        eq('correctly reports component as not initialized', $container->isActive('int'), false);
+        eq('correctly reports component as inactive', $container->isActive('int'), false);
         eq('can get int', $container->int, TestContainer::EXPECTED_INT);
-        eq('correctly reports component as initialized', $container->isActive('int'), true);
+        eq('correctly reports component as active', $container->isActive('int'), true);
         eq('can get object', $container->dummy, $dummy);
 
-        $container = new TestContainer;
+        $container = new TestContainer();
+        $container->dummy = null; // should bypass type-check
+        $container->seal(); // would throw without the above initialization
+
+        ok('type-checking is bypassed when component is explicitly set to null', true);
+
+        $container = new TestContainer();
+
+        $container->load('test.config.php');
+
+        eq('can load external configuration file', $container->loaded, TestContainer::EXPECTED_LOADED);
 
         $container->register(
             'dummy',
@@ -109,7 +134,7 @@ test(
         ok('can perform late configuration', $container->dummy->configured);
         ok('can inject dependency', $got_dependency);
 
-        unset($container); // triggers shutdown function, setting $shut_down to true
+        unset($container); // triggers shutdown function
 
         ok('can perform shutdown function', $shut_down === true);
     }
@@ -180,7 +205,7 @@ test(
         $container = new TestContainer;
 
         expect(
-            'should throw on attempted access to uninitialized value',
+            'should throw on attempted access to component in unsealed container',
             $EXPECTED,
             function () use ($container) {
                 $value = $container->int;
@@ -205,7 +230,7 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on attempted to overwrite registered property',
+            'should throw on attempted overwrite of registered property',
             $EXPECTED,
             function () use ($container) {
                 $container->int = 456; // will fail because container is sealed
@@ -232,7 +257,7 @@ test(
             'should throw on attempt to seal container twice',
             $EXPECTED,
             function () use ($container) {
-                $container->seal();; // will fail because container is already sealed
+                $container->seal(); // will fail because container is already sealed
             }
         );
 
@@ -240,7 +265,7 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on attempt to configure an undefined property',
+            'should throw on attempt to configure an undefined component',
             $EXPECTED,
             function () use ($container) {
                 $container->configure(function($nonsense) {}); // will fail because container is already sealed
@@ -264,6 +289,20 @@ test(
             $EXPECTED,
             function () use ($container) {
                 $container->dummy = 'not even an object!';
+            }
+        );
+
+        $container = new TestContainer();
+        $container->register('dummy', function () {
+            return null; // should trigger an exception
+        });
+        $container->seal();
+
+        expect(
+            'type-checking is enabled when initialization function returns null',
+            $EXPECTED,
+            function () use ($container) {
+                $null = $container->dummy; // initialization function returns null
             }
         );
     }

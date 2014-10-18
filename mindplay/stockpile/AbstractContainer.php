@@ -440,6 +440,10 @@ abstract class AbstractContainer
             throw new ContainerException("undefined component: '{$name}'");
         }
 
+        if ($value === null) {
+            return; // explicitly configured null-value is allowed
+        }
+
         $type = $this->_types[$name];
 
         if (strcasecmp($type, 'mixed') === 0) {
@@ -504,6 +508,10 @@ abstract class AbstractContainer
         // run initialization function:
 
         $value = $this->_invoke($this->_init[$name]);
+
+        if ($value === null) {
+            throw new ContainerException("initialization function for component '{$name}' returned null");
+        }
 
         $this->checkType($name, $value); // will throw if the initialized value is bad
 

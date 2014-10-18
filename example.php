@@ -59,16 +59,19 @@ class MyContainer extends Container
     }
 }
 
-$container = new MyContainer;
+$container = new MyContainer();
 
-// properties using late construction can be configured using a callback-method:
+// components using late construction can be configured using a callback-method:
 
 $container->configure(function(Greeter $greeter, $mood) {
     // the parameter-name (greeter) defines the property to be configured
     // the $mood configuration-value is automatically injected
-    $greeter->name = 'World';
     $greeter->mood = $mood;
 });
+
+// components can also be configured via external configuration scripts:
+
+$container->load('example.config.php');
 
 // configuration container must be sealed before properties can be read:
 
