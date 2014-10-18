@@ -72,9 +72,9 @@ test(
         $container->seal();
 
         eq('can get string', $container->string, TestContainer::EXPECTED_STRING);
-        eq('correctly reports component as not initialized', $container->active('int'), false);
+        eq('correctly reports component as not initialized', $container->isActive('int'), false);
         eq('can get int', $container->int, TestContainer::EXPECTED_INT);
-        eq('correctly reports component as initialized', $container->active('int'), true);
+        eq('correctly reports component as initialized', $container->isActive('int'), true);
         eq('can get object', $container->dummy, $dummy);
 
         $container = new TestContainer;

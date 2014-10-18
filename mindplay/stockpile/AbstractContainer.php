@@ -56,7 +56,7 @@ abstract class AbstractContainer
      * @var array map of component-names to initialized objects/values
      * @see get()
      */
-    protected $_values = array();
+    private $_values = array();
 
     /**
      * @var bool true if the container has been sealed
@@ -289,7 +289,7 @@ abstract class AbstractContainer
             if (array_key_exists($name, $params)) {
                 $args[] = $params[$name];
             } else if (isset($this->_types[$name])) {
-                if ($param->isDefaultValueAvailable() && ! $this->active($name)) {
+                if ($param->isDefaultValueAvailable() && ! $this->isActive($name)) {
                     $args[] = $param->getDefaultValue();
                 } else {
                     $args[] = $this->get($name);
@@ -316,7 +316,7 @@ abstract class AbstractContainer
      *
      * @throws ContainerException if this Container has not been sealed
      */
-    public function active($name)
+    public function isActive($name)
     {
         if (! $this->_sealed) {
             throw new ContainerException("Container must be sealed before this method can be called");
@@ -405,7 +405,7 @@ abstract class AbstractContainer
      *
      * @see define()
      */
-    public function defined($name)
+    public function isDefined($name)
     {
         return isset($this->_types[$name]);
     }
@@ -418,7 +418,7 @@ abstract class AbstractContainer
      * @see register()
      * @see set()
      */
-    protected function registered($name)
+    public function isRegistered($name)
     {
         return array_key_exists($name, $this->_init) || array_key_exists($name, $this->_values);
     }

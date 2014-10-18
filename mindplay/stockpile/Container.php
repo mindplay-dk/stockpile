@@ -74,6 +74,6 @@ abstract class Container extends AbstractContainer
      */
     public function __isset($name)
     {
-        return $this->registered($name);
+        return $this->isDefined($name);
     }
 }
