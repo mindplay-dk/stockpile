@@ -164,6 +164,14 @@ test(
 
         eq('skips initialization of optional dependency on invokation', $expected_null, null);
 
+        $container->invoke(
+            function ($default = 'DEFAULT') use (&$expected_default) {
+                $expected_default = $default;
+            }
+        );
+
+        eq('completes missing argument using default value', $expected_default, 'DEFAULT');
+
         $consumer = new ConsumerDummy();
 
         $STRING_OVERRIDE = 'string_override';
@@ -242,10 +250,33 @@ test(
         $container->seal();
 
         expect(
-            'should throw on attempted access to sealed container',
+            'should throw on attempted direct access to sealed container',
             $EXPECTED,
             function () use ($container) {
                 $container->int = 456; // will fail because container is sealed
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+        $container->seal();
+
+        expect(
+            'should throw on attempted registration in sealed container',
+            $EXPECTED,
+            function () use ($container) {
+                $container->register('int', function () { return 456; }); // will fail because container is sealed
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            'should throw on attempted registration after direct access to sealed container',
+            $EXPECTED,
+            function () use ($container) {
+                $container->register('dummy', function () { return new TestDummy(); }); // will fail because container is sealed
             }
         );
 
@@ -305,6 +336,40 @@ test(
                 $null = $container->dummy; // initialization function returns null
             }
         );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            'should throw on attempt to load missing configuration file',
+            $EXPECTED,
+            function () use ($container) {
+                $container->load('foo.bar');
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            'should throw on missing argument to invoke()',
+            $EXPECTED,
+            function () use ($container) {
+                $container->invoke(function (array $foo_bar) {});
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            'should throw on invalid argument to invoke()',
+            $EXPECTED,
+            function () use ($container) {
+                $container->invoke((object) array());
+            }
+        );
+
     }
 );
 
