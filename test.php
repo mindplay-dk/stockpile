@@ -116,7 +116,11 @@ class TestCustomContainer extends AbstractContainer
 }
 
 if (coverage()) {
-    coverage()->filter()->addDirectoryToWhitelist(__DIR__ . '/src');
+    $filter =coverage()->filter();
+    $filter->addDirectoryToWhitelist(__DIR__ . '/src');
+    // there's no code in this Exception type, so nothing to test:
+    $filter->removeFileFromWhitelist(__DIR__ . '/src/ContainerException.php');
+
     coverage()->start('test');
 }
 
