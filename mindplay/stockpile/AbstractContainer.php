@@ -294,8 +294,6 @@ abstract class AbstractContainer
                 }
             } else if ($param->isDefaultValueAvailable()) {
                 $args[] = $param->getDefaultValue();
-            } else if ($param->isOptional() || $param->allowsNull()) {
-                $args[] = null;
             } else {
                 throw new ContainerException("invokation failed: unable to satisfy the argument \${$name}");
             }
