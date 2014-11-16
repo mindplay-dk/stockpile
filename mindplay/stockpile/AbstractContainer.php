@@ -162,7 +162,7 @@ abstract class AbstractContainer
     public function register($name, Closure $init)
     {
         if ($this->_sealed === true) {
-            throw new ContainerException('attempted access to sealed configuration container');
+            throw new ContainerException('attempted registration in sealed configuration container');
         }
 
         if (array_key_exists($name, $this->_init)) {
@@ -497,10 +497,6 @@ abstract class AbstractContainer
      */
     private function _initialize($name)
     {
-        if (! array_key_exists($name, $this->_types)) {
-            throw new ContainerException("undefined component '{$name}'");
-        }
-
         // run initialization function:
 
         $value = $this->_invoke($this->_init[$name]);
@@ -523,10 +519,6 @@ abstract class AbstractContainer
      */
     private function _configure($name)
     {
-        if (! array_key_exists($name, $this->_values)) {
-            throw new ContainerException("internal error: attempted configuration of uninitialized component");
-        }
-
         if (!isset($this->_config[$name])) {
             return; // nothing to configure
         }

@@ -16,6 +16,7 @@ $loader = require __DIR__ . '/vendor/autoload.php';
 $loader->add('mindplay\stockpile', __DIR__);
 
 use mindplay\stockpile\Container;
+use ReflectionClass;
 
 class TestDummy
 {
@@ -94,6 +95,14 @@ class TestCustomContainer extends AbstractContainer
     public function doGet($name)
     {
         return $this->get($name);
+    }
+
+    /**
+     * Exposes the checkType() method for test-cases
+     */
+    public function doCheckType($name, $value)
+    {
+        $this->checkType($name, $value);
     }
 }
 
@@ -297,9 +306,13 @@ test(
             $EXPECTED,
             'should throw on attempted registration in sealed container',
             function () use ($container) {
-                $container->register('int', function () {
+                // will fail because container is sealed:
+                $container->register(
+                    'int',
+                    function () {
                         return 456;
-                    }); // will fail because container is sealed
+                    }
+                );
             }
         );
 
@@ -317,6 +330,29 @@ test(
                         return new TestDummy();
                     }
                 );
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+        $container->seal();
+
+        expect(
+            $EXPECTED,
+            'should throw on attempt to configure component after sealing',
+            function () use ($container) {
+                $container->configure(function ($dummy) {}); // will fail because container is already sealed
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            $EXPECTED,
+            'should throw for invalid configuration function',
+            function () use ($container) {
+                $container->configure(function () {}); // will fail because the closure takes no arguments
             }
         );
 
@@ -396,6 +432,18 @@ test(
             }
         );
 
+        expect(
+            $EXPECTED,
+            'should throw on type-check against undefined component',
+            function () use ($container) {
+                $container->doCheckType('not_there', null);
+            }
+        );
+
+        $container->doDefine('anything', 'mixed');
+        $container->doSet('anything', 'value');
+        eq($container->doGet('anything'), 'value', 'string value passes a "mixed" type check');
+
         $container = new TestContainer();
         $container->register('dummy', function () {
             return null; // should trigger an exception
@@ -451,7 +499,7 @@ test(
 
         expect(
             $EXPECTED,
-            'should throw on duplciate define()',
+            'should throw on duplicate define()',
             function () use ($container) {
                 $container->doDefine('dupe', 'string');
             }
@@ -553,8 +601,7 @@ function expect($exception_type, $why, $function)
 function format($value, $verbose = false)
 {
     if ($value instanceof Exception) {
-        return get_class($value)
-        . ($verbose ? ": \"" . $value->getMessage() . "\"" : '');
+        return get_class($value) . ": \"" . $value->getMessage() . "\"";
     }
 
     if (! $verbose && is_array($value)) {
@@ -610,4 +657,24 @@ function coverage()
     }
 
     return $coverage;
+}
+
+/**
+ * Invoke a protected or private method (by means of reflection)
+ *
+ * @param object $object      the object on which to invoke a method
+ * @param string $method_name the name of the method
+ * @param array  $arguments   arguments to pass to the function
+ *
+ * @return mixed the return value from the function call
+ */
+function invoke($object, $method_name, $arguments = array())
+{
+    $class = new ReflectionClass(get_class($object));
+
+    $method = $class->getMethod($method_name);
+
+    $method->setAccessible(true);
+
+    return $method->invokeArgs($object, $arguments);
 }
