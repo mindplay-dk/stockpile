@@ -5,6 +5,7 @@ namespace test;
 use Closure;
 use Exception;
 
+use mindplay\stockpile\AbstractContainer;
 use PHP_CodeCoverage;
 use PHP_CodeCoverage_Exception;
 use PHP_CodeCoverage_Report_Text;
@@ -66,8 +67,39 @@ class TestContainer extends Container
     }
 }
 
+class TestCustomContainer extends AbstractContainer
+{
+    protected function init()
+    {}
+
+    /**
+     * Exposes the define() method for test-cases
+     */
+    public function doDefine($name, $type)
+    {
+        $this->define($name, $type);
+    }
+
+    /**
+     * Exposes the set() method for test-cases
+     */
+    public function doSet($name, $value)
+    {
+        $this->set($name, $value);
+    }
+
+    /**
+     * Exposes the get() method for test-cases
+     */
+    public function doGet($name)
+    {
+        return $this->get($name);
+    }
+}
+
 if (coverage()) {
-    coverage('stockpile')->filter()->addDirectoryToWhitelist(__DIR__ . '/mindplay/stockpile');
+    coverage()->filter()->addDirectoryToWhitelist(__DIR__ . '/mindplay/stockpile');
+    coverage()->start('test');
 }
 
 test(
@@ -75,34 +107,34 @@ test(
     function () {
         $container = new TestContainer;
 
-        eq('correctly reports component as defined', $container->isDefined('dummy'), true);
-        eq('correctly reports component as not defined', $container->isDefined('bunk'), false);
-        eq('correctly reports component as not registered', $container->isRegistered('dummy'), false);
+        eq($container->isDefined('dummy'), true, 'correctly reports component as defined');
+        eq($container->isDefined('bunk'), false, 'correctly reports component as not defined');
+        eq($container->isRegistered('dummy'), false, 'correctly reports component as not registered');
 
         $dummy = $container->dummy = new TestDummy;
 
-        eq('correctly reports component as registered', $container->isRegistered('dummy'), true);
+        eq($container->isRegistered('dummy'), true, 'correctly reports component as registered');
 
         $container->seal();
 
-        eq('can get root path', $container->getRootPath(), getcwd());
-        eq('can get string', $container->string, TestContainer::EXPECTED_STRING);
-        eq('correctly reports component as inactive', $container->isActive('int'), false);
-        eq('can get int', $container->int, TestContainer::EXPECTED_INT);
-        eq('correctly reports component as active', $container->isActive('int'), true);
-        eq('can get object', $container->dummy, $dummy);
+        eq($container->getRootPath(), getcwd(), 'can get root path');
+        eq($container->string, TestContainer::EXPECTED_STRING, 'can get string');
+        eq($container->isActive('int'), false, 'correctly reports component as inactive');
+        eq($container->int, TestContainer::EXPECTED_INT, 'can get int');
+        eq($container->isActive('int'), true, 'correctly reports component as active');
+        eq($container->dummy, $dummy, 'can get object');
 
         $container = new TestContainer();
         $container->dummy = null; // should bypass type-check
         $container->seal(); // would throw without the above initialization
 
-        ok('type-checking is bypassed when component is explicitly set to null', true);
+        ok(true, 'type-checking is bypassed when component is explicitly set to null');
 
         $container = new TestContainer();
 
         $container->load('test.config.php');
 
-        eq('can load external configuration file', $container->loaded, TestContainer::EXPECTED_LOADED);
+        eq($container->loaded, TestContainer::EXPECTED_LOADED, 'can load external configuration file');
 
         $container->register(
             'dummy',
@@ -130,13 +162,13 @@ test(
 
         $container->seal();
 
-        ok('can perform late initialization', $container->dummy instanceof TestDummy);
-        ok('can perform late configuration', $container->dummy->configured);
-        ok('can inject dependency', $got_dependency);
+        ok($container->dummy instanceof TestDummy, 'can perform late initialization');
+        ok($container->dummy->configured, 'can perform late configuration');
+        ok($got_dependency, 'can inject dependency');
 
         unset($container); // triggers shutdown function
 
-        ok('can perform shutdown function', $shut_down === true);
+        ok($shut_down === true, 'can perform shutdown function');
     }
 );
 
@@ -154,7 +186,7 @@ test(
 
         $container->seal();
 
-        eq('skips initialization of optional dependency during configuration', $got_expected_null, true);
+        eq($got_expected_null, true, 'skips initialization of optional dependency during configuration');
 
         $container->invoke(
             function ($string, $int = null) use (&$expected_null) {
@@ -162,7 +194,7 @@ test(
             }
         );
 
-        eq('skips initialization of optional dependency on invokation', $expected_null, null);
+        eq($expected_null, null, 'skips initialization of optional dependency on invokation');
 
         $container->invoke(
             function ($default = 'DEFAULT') use (&$expected_default) {
@@ -170,7 +202,7 @@ test(
             }
         );
 
-        eq('completes missing argument using default value', $expected_default, 'DEFAULT');
+        eq($expected_default, 'DEFAULT', 'completes missing argument using default value');
 
         $consumer = new ConsumerDummy();
 
@@ -186,12 +218,12 @@ test(
             )
         );
 
-        eq('can inject argument to closure', $injected_int, TestContainer::EXPECTED_INT);
-        eq('can override argument to closure', $injected_string, $STRING_OVERRIDE);
+        eq($injected_int, TestContainer::EXPECTED_INT, 'can inject argument to closure');
+        eq($injected_string, $STRING_OVERRIDE, 'can override argument to closure');
 
         $container->invoke(array($consumer, 'inject'));
 
-        eq('can inject argument to method', $consumer->injected_string, TestContainer::EXPECTED_STRING);
+        eq($consumer->injected_string, TestContainer::EXPECTED_STRING, 'can inject argument to method');
     }
 );
 
@@ -203,8 +235,8 @@ test(
         $container = new TestContainer;
 
         expect(
-            'should throw if sealed while incomplete',
             $EXPECTED,
+            'should throw if sealed while incomplete',
             function () use ($container) {
                 $container->seal(); // $dummy deliberately left uninitialized
             }
@@ -213,8 +245,8 @@ test(
         $container = new TestContainer;
 
         expect(
-            'should throw on attempted access to component in unsealed container',
             $EXPECTED,
+            'should throw on attempted access to component in unsealed container',
             function () use ($container) {
                 $value = $container->int;
             }
@@ -223,11 +255,11 @@ test(
         $container = new TestContainer;
 
         expect(
-            'should throw on attempted access to register twice',
             $EXPECTED,
+            'should throw on attempted access to register twice',
             function () use ($container) {
                 $container->register('int',
-                    function() {
+                    function () {
                         return 456; // will fail because $int is already registered
                     }
                 );
@@ -238,8 +270,8 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
+            $EXPECTED,
             'should throw on attempted overwrite of registered property',
-            $EXPECTED,
             function () use ($container) {
                 $container->int = 456; // will fail because container is sealed
             }
@@ -250,8 +282,8 @@ test(
         $container->seal();
 
         expect(
+            $EXPECTED,
             'should throw on attempted direct access to sealed container',
-            $EXPECTED,
             function () use ($container) {
                 $container->int = 456; // will fail because container is sealed
             }
@@ -262,10 +294,12 @@ test(
         $container->seal();
 
         expect(
-            'should throw on attempted registration in sealed container',
             $EXPECTED,
+            'should throw on attempted registration in sealed container',
             function () use ($container) {
-                $container->register('int', function () { return 456; }); // will fail because container is sealed
+                $container->register('int', function () {
+                        return 456;
+                    }); // will fail because container is sealed
             }
         );
 
@@ -273,10 +307,16 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on attempted registration after direct access to sealed container',
             $EXPECTED,
+            'should throw on attempted registration after direct access to sealed container',
             function () use ($container) {
-                $container->register('dummy', function () { return new TestDummy(); }); // will fail because container is sealed
+                // will fail because container is sealed:
+                $container->register(
+                    'dummy',
+                    function () {
+                        return new TestDummy();
+                    }
+                );
             }
         );
 
@@ -285,8 +325,8 @@ test(
         $container->seal();
 
         expect(
-            'should throw on attempt to seal container twice',
             $EXPECTED,
+            'should throw on attempt to seal container twice',
             function () use ($container) {
                 $container->seal(); // will fail because container is already sealed
             }
@@ -296,18 +336,33 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on attempt to configure an undefined component',
             $EXPECTED,
+            'should throw on attempt to configure an undefined component',
             function () use ($container) {
-                $container->configure(function($nonsense) {}); // will fail because container is already sealed
+                // will fail because the component is undefined:
+                $container->configure(
+                    function ($nonsense) {
+                    }
+                );
+            }
+        );
+
+        $container = new TestContainer;
+        $container->dummy = new TestDummy;
+
+        expect(
+            $EXPECTED,
+            'should throw on attempt to check if an undefined component is active',
+            function () use ($container) {
+                $container->isActive('blah'); // will fail because component is undefined
             }
         );
 
         $container = new TestContainer;
 
         expect(
-            'should throw on violation of string type-check',
             $EXPECTED,
+            'should throw on violation of string type-check',
             function () use ($container) {
                 $container->string = 123; // not a string!
             }
@@ -316,10 +371,28 @@ test(
         $container = new TestContainer;
 
         expect(
-            'should throw on violation of object type-check',
             $EXPECTED,
+            'should throw on violation of object type-check',
             function () use ($container) {
                 $container->dummy = 'not even an object!';
+            }
+        );
+
+        $container = new TestCustomContainer();
+        $container->doDefine('strings', 'string[]');
+        $container->doSet('strings', array('foo', 'bar'));
+        $container->seal();
+
+        eq($container->doGet('strings'), array('foo', 'bar'), 'value passed shallow type-checking for arrays');
+
+        $container = new TestCustomContainer();
+        $container->doDefine('strings', 'string[]');
+
+        expect(
+            $EXPECTED,
+            'should throw on violation of shallow array type-check',
+            function () use ($container) {
+                $container->doSet('strings', 'not_an_array');
             }
         );
 
@@ -330,8 +403,8 @@ test(
         $container->seal();
 
         expect(
-            'type-checking is enabled when initialization function returns null',
             $EXPECTED,
+            'type-checking is enabled when initialization function returns null',
             function () use ($container) {
                 $null = $container->dummy; // initialization function returns null
             }
@@ -341,8 +414,8 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on attempt to load missing configuration file',
             $EXPECTED,
+            'should throw on attempt to load missing configuration file',
             function () use ($container) {
                 $container->load('foo.bar');
             }
@@ -352,10 +425,13 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on missing argument to invoke()',
             $EXPECTED,
+            'should throw on missing argument to invoke()',
             function () use ($container) {
-                $container->invoke(function (array $foo_bar) {});
+                $container->invoke(
+                    function (array $foo_bar) {
+                    }
+                );
             }
         );
 
@@ -363,17 +439,29 @@ test(
         $container->dummy = new TestDummy;
 
         expect(
-            'should throw on invalid argument to invoke()',
             $EXPECTED,
+            'should throw on invalid argument to invoke()',
             function () use ($container) {
-                $container->invoke((object) array());
+                $container->invoke((object)array());
             }
         );
 
+        $container = new TestCustomContainer();
+        $container->doDefine('dupe', 'string');
+
+        expect(
+            $EXPECTED,
+            'should throw on duplciate define()',
+            function () use ($container) {
+                $container->doDefine('dupe', 'string');
+            }
+        );
     }
 );
 
 if (coverage()) {
+    coverage()->stop();
+
     $report = new PHP_CodeCoverage_Report_Text(50, 90, false, false);
 
     echo $report->process(coverage(), false);
@@ -391,72 +479,121 @@ exit(status());
  * @param string   $name     test description
  * @param callable $function test implementation
  */
-function test($name, Closure $function)
+function test($name, $function)
 {
     echo "\n=== $name ===\n\n";
 
     try {
-        $function();
+        call_user_func($function);
     } catch (Exception $e) {
-        ok("UNEXPECTED EXCEPTION:\n\n$e", false);
+        ok(false, "UNEXPECTED EXCEPTION", $e);
     }
 }
 
 /**
- * @param string $text   description of assertion
  * @param bool   $result result of assertion
+ * @param string $why    description of assertion
  * @param mixed  $value  optional value (displays on failure)
  */
-function ok($text, $result, $value = null)
+function ok($result, $why, $value = null)
 {
     if ($result === true) {
-        echo "- PASS: $text\n";
+        echo "- PASS: " . ($why === null ? 'OK' : $why) . ($value === null ? '' : ' (' . format($value) . ')') . "\n";
     } else {
-        echo "# FAIL: $text" . ($value === null ? '' : ' (' . (is_string($value) ? $value : var_export($value, true)) . ')') . "\n";
+        echo "# FAIL: " . ($why === null ? 'ERROR' : $why) . ($value === null ? '' : ' - ' . format($value, true)) . "\n";
         status(false);
     }
 }
 
 /**
- * @param string $text   description of assertion
- * @param mixed  $value  value
- * @param mixed  $value  expected value
+ * @param mixed  $value    value
+ * @param mixed  $expected expected value
+ * @param string $why      description of assertion
  */
-function eq($text, $value, $expected) {
-    ok($text, $value === $expected, "expected: " . var_export($expected, true) . ", got: " . var_export($value, true));
+function eq($value, $expected, $why)
+{
+    $result = $value === $expected;
+
+    $info = $result
+        ? format($value)
+        : "expected: " . format($expected, true) . ", got: " . format($value, true);
+
+    ok($result, ($why === null ? $info : "$why ($info)"));
 }
 
 /**
- * @param string   $text           description of assertion
  * @param string   $exception_type Exception type name
+ * @param string   $why            description of assertion
  * @param callable $function       function expected to throw
  */
-function expect($text, $exception_type, Closure $function)
+function expect($exception_type, $why, $function)
 {
     try {
-        $function();
+        call_user_func($function);
     } catch (Exception $e) {
         if ($e instanceof $exception_type) {
-            ok("$text (ok: \"{$e->getMessage()}\")", true);
+            ok(true, $why, $e);
             return;
         } else {
             $actual_type = get_class($e);
-            ok("$text (expected $exception_type but $actual_type was thrown)", false);
+            ok(false, "$why (expected $exception_type but $actual_type was thrown)");
             return;
         }
     }
 
-    ok("$text (expected exception $exception_type was NOT thrown)", false);
+    ok(false, "$why (expected exception $exception_type was NOT thrown)");
 }
 
 /**
- * @param string|null $text description (to start coverage); or null (to stop coverage)
- * @return PHP_CodeCoverage|null
+ * @param mixed $value
+ * @param bool  $verbose
+ *
+ * @return string
  */
-function coverage($text = null)
+function format($value, $verbose = false)
+{
+    if ($value instanceof Exception) {
+        return get_class($value)
+        . ($verbose ? ": \"" . $value->getMessage() . "\"" : '');
+    }
+
+    if (! $verbose && is_array($value)) {
+        return 'array[' . count($value) . ']';
+    }
+
+    if (is_bool($value)) {
+        return $value ? 'TRUE' : 'FALSE';
+    }
+
+    if (is_object($value) && !$verbose) {
+        return get_class($value);
+    }
+
+    return print_r($value, true);
+}
+
+/**
+ * @param bool|null $status test status
+ *
+ * @return int number of failures
+ */
+function status($status = null)
+{
+    static $failures = 0;
+
+    if ($status === false) {
+        $failures += 1;
+    }
+
+    return $failures;
+}
+
+/**
+ * @return PHP_CodeCoverage|null code coverage service, if available
+ */
+function coverage()
 {
     static $coverage = null;
-    static $running = false;
 
     if ($coverage === false) {
         return null; // code coverage unavailable
@@ -472,29 +609,5 @@ function coverage($text = null)
         }
     }
 
-    if (is_string($text)) {
-        $coverage->start($text);
-        $running = true;
-    } else {
-        if ($running) {
-            $coverage->stop();
-            $running = false;
-        }
-    }
-
     return $coverage;
-}
-
-/**
- * @param bool|null $status test status
- * @return int number of failures
- */
-function status($status = null) {
-    static $failures = 0;
-    
-    if ($status === false) {
-        $failures += 1;
-    }
-    
-    return $failures;
 }
