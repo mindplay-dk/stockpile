@@ -23,12 +23,16 @@ use mindplay\filereflection\ReflectionFile;
 abstract class Container extends AbstractContainer
 {
     /**
-     * Regular expression used by the constructor to parse @property-annotations
+     * Regular expression used by the constructor to parse property-annotations
+     *
+     * @type string
      */
     const PROPERTY_PATTERN = '/^\s*\*+\s*\@property(?:\-read|\-write|)\s+([\w\\\\]+(?:\\[\\]|))\s+\$(\w+)/im';
 
     /**
      * Initializes the container by parsing property-annotations of the concrete class.
+     *
+     * @return void
      *
      * @throws ContainerException if the container has no property-annotations
      */
@@ -55,6 +59,13 @@ abstract class Container extends AbstractContainer
 
     /**
      * @internal write-accessor for directly setting configuration-properties
+     *
+     * @param string $name
+     * @param mixed $value
+     *
+     * @return void
+     *
+     * @throws ContainerException
      */
     public function __set($name, $value)
     {
@@ -63,6 +74,12 @@ abstract class Container extends AbstractContainer
 
     /**
      * @internal read-accessor for component properties
+     *
+     * @param string $name
+     *
+     * @return mixed
+     *
+     * @throws ContainerException
      */
     public function __get($name)
     {
@@ -71,6 +88,10 @@ abstract class Container extends AbstractContainer
 
     /**
      * @internal isset() overloading for properties
+     *
+     * @param string $name
+     *
+     * @return bool
      */
     public function __isset($name)
     {

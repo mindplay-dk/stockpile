@@ -68,6 +68,15 @@ class TestContainer extends Container
     }
 }
 
+/**
+ * Deliberately has no property-annotations
+ */
+class EmptyContainer extends Container
+{
+    protected function init()
+    {}
+}
+
 class TestCustomContainer extends AbstractContainer
 {
     protected function init()
@@ -116,13 +125,17 @@ test(
     function () {
         $container = new TestContainer;
 
-        eq($container->isDefined('dummy'), true, 'correctly reports component as defined');
-        eq($container->isDefined('bunk'), false, 'correctly reports component as not defined');
-        eq($container->isRegistered('dummy'), false, 'correctly reports component as not registered');
+        eq($container->isDefined('dummy'), true, 'correctly reports component as defined [1]');
+        eq(isset($container->dummy), true, 'correctly reports component as defined [2]');
+        eq($container->isDefined('bunk'), false, 'correctly reports component as not defined [1]');
+        eq(isset($container->bunk), false, 'correctly reports component as not defined [2]');
+        eq($container->isRegistered('dummy'), false, 'correctly reports component as not registered [1]');
+        eq(isset($container->dummy), false, 'correctly reports component as not registered [2]');
 
         $dummy = $container->dummy = new TestDummy;
 
-        eq($container->isRegistered('dummy'), true, 'correctly reports component as registered');
+        eq($container->isRegistered('dummy'), true, 'correctly reports component as registered [1]');
+        eq(isset($container->dummy), true, 'correctly reports component as registered [2]');
 
         $container->seal();
 
@@ -502,6 +515,14 @@ test(
             'should throw on duplicate define()',
             function () use ($container) {
                 $container->doDefine('dupe', 'string');
+            }
+        );
+
+        expect(
+            $EXPECTED,
+            'should throw on missing property-annotations',
+            function () {
+                $container = new EmptyContainer();
             }
         );
     }
