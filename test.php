@@ -13,7 +13,7 @@ use PHP_CodeCoverage_Report_Clover;
 
 /** @var \Composer\Autoload\ClassLoader $loader */
 $loader = require __DIR__ . '/vendor/autoload.php';
-$loader->add('mindplay\stockpile', __DIR__);
+$loader->addPsr4('mindplay\stockpile\\', __DIR__ . '/src');
 
 use mindplay\stockpile\Container;
 use ReflectionClass;
@@ -116,7 +116,7 @@ class TestCustomContainer extends AbstractContainer
 }
 
 if (coverage()) {
-    coverage()->filter()->addDirectoryToWhitelist(__DIR__ . '/mindplay/stockpile');
+    coverage()->filter()->addDirectoryToWhitelist(__DIR__ . '/src');
     coverage()->start('test');
 }
 
@@ -129,8 +129,7 @@ test(
         eq(isset($container->dummy), true, 'correctly reports component as defined [2]');
         eq($container->isDefined('bunk'), false, 'correctly reports component as not defined [1]');
         eq(isset($container->bunk), false, 'correctly reports component as not defined [2]');
-        eq($container->isRegistered('dummy'), false, 'correctly reports component as not registered [1]');
-        eq(isset($container->dummy), false, 'correctly reports component as not registered [2]');
+        eq($container->isRegistered('dummy'), false, 'correctly reports component as not registered');
 
         $dummy = $container->dummy = new TestDummy;
 

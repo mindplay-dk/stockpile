@@ -6,7 +6,7 @@ use mindplay\stockpile\Container;
 
 /** @var \Composer\Autoload\ClassLoader $loader */
 $loader = require __DIR__ . '/vendor/autoload.php';
-$loader->add('mindplay\stockpile', __DIR__);
+$loader->addPsr4('mindplay\stockpile\\', __DIR__ . '/src');
 
 // ===== EXAMPLE =====
 
