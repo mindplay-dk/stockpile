@@ -1,5 +1,5 @@
 filter:
-    paths: [mindplay/stockpile/*]
+    paths: [src/*]
 
 tools:
     external_code_coverage: true
