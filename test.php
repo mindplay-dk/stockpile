@@ -11,9 +11,7 @@ use PHP_CodeCoverage_Exception;
 use PHP_CodeCoverage_Report_Text;
 use PHP_CodeCoverage_Report_Clover;
 
-/** @var \Composer\Autoload\ClassLoader $loader */
-$loader = require __DIR__ . '/vendor/autoload.php';
-$loader->addPsr4('mindplay\stockpile\\', __DIR__ . '/src');
+require __DIR__ . '/vendor/autoload.php';
 
 use mindplay\stockpile\Container;
 use ReflectionClass;
