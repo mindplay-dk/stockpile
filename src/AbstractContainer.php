@@ -173,6 +173,10 @@ abstract class AbstractContainer
             throw new ContainerException("component '{$name}' has already been initialized by direct assignment");
         }
 
+        if (!array_key_exists($name, $this->_types)) {
+            throw new ContainerException("undefined component: '{$name}'");
+        }
+
         $this->_init[$name] = $init;
     }
 

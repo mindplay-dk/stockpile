@@ -383,6 +383,22 @@ test(
         );
 
         $container = new TestContainer;
+
+        expect(
+            $EXPECTED,
+            'should throw on attempt to register an undefined component',
+            function () use ($container) {
+                // will fail because the component is undefined:
+                $container->register(
+                    'undefined',
+                    function () {
+                        return new TestDummy;
+                    }
+                );
+            }
+        );
+
+        $container = new TestContainer;
         $container->dummy = new TestDummy;
 
         expect(
