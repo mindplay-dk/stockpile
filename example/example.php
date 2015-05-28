@@ -4,7 +4,7 @@ namespace mindplay\stockpile\example;
 
 use mindplay\stockpile\Container;
 
-require __DIR__ . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 // ===== EXAMPLE =====
 
@@ -30,9 +30,9 @@ class Greeter
  *
  * The @property-annotations below will be parsed and used to configure the container.
  *
- * @property Greeter $greeter a sample configured object
- * @property int     $time    the time of day
- * @property string  $mood    my current mood
+ * @property-read Greeter $greeter a sample configured object
+ * @property int          $time    the time of day
+ * @property string       $mood    my current mood
  */
 class MyContainer extends Container
 {
