@@ -350,6 +350,14 @@ abstract class AbstractContainer
     }
 
     /**
+     * @return bool true, if the Container has been sealed
+     */
+    protected function isSealed()
+    {
+        return $this->_sealed;
+    }
+
+    /**
      * Initialize and configure a component (as needed) and return it.
      *
      * @param string $name name of component to return

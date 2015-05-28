@@ -206,7 +206,9 @@ test(
             return $dummy_two;
         });
 
+        ok(invoke($container, 'isSealed') === false, "container has not yet been sealed");
         $container->seal();
+        ok(invoke($container, 'isSealed') === true, "container has been sealed");
 
         eq($container->dummy, $dummy_two, 'component has been replaced');
     }
