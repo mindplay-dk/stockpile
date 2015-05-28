@@ -181,6 +181,30 @@ abstract class AbstractContainer
     }
 
     /**
+     * Unregister the component with the given name.
+     *
+     * Use this to explicitly remove a component that has already been registered or set
+     * - then use register() or set() to redefine the component.
+     *
+     * @param string $name name of component to unregister.
+     *
+     * @throws ContainerException
+     */
+    public function unregister($name)
+    {
+        if ($this->_sealed === true) {
+            throw new ContainerException('attempted modification of sealed configuration container');
+        }
+
+        if (!array_key_exists($name, $this->_types)) {
+            throw new ContainerException("undefined component: '{$name}'");
+        }
+
+        unset($this->_init[$name]);
+        unset($this->_values[$name]);
+    }
+
+    /**
      * Add a configuration-function to the container - the function will be called the first
      * time a registered component is accessed. Configuration-functions are called in the
      * order in which they were added.

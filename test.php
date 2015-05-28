@@ -192,6 +192,25 @@ test(
         unset($container); // triggers shutdown function
 
         ok($shut_down === true, 'can perform shutdown function');
+
+        $container = new TestContainer();
+
+        $dummy_one = new TestDummy();
+        $dummy_two = new TestDummy();
+
+        $container->dummy = $dummy_one;
+
+        $container->unregister('dummy');
+
+        ok($container->isRegistered('dummy') === false, 'component has been unregistered');
+
+        $container->register('dummy', function () use ($dummy_two) {
+            return $dummy_two;
+        });
+
+        $container->seal();
+
+        eq($container->dummy, $dummy_two, 'component has been replaced');
     }
 );
 
@@ -515,6 +534,37 @@ test(
 
         $container = new TestContainer;
         $container->dummy = new TestDummy;
+
+        expect(
+            $EXPECTED,
+            'should throw on invalid argument to invoke()',
+            function () use ($container) {
+                $container->invoke((object)array());
+            }
+        );
+
+        $container = new TestContainer;
+        $container->register(
+            'dummy',
+            function () {
+                return new TestDummy;
+            }
+        );
+        expect(
+            $EXPECTED,
+            'should throw on attempted unregister() of undefined component',
+            function () use ($container) {
+                $container->unregister('nothing');
+            }
+        );
+        $container->seal();
+        expect(
+            $EXPECTED,
+            'should throw on attempted unregister() after seal()',
+            function () use ($container) {
+                $container->unregister('dummy');
+            }
+        );
 
         expect(
             $EXPECTED,
