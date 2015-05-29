@@ -4,13 +4,8 @@ namespace test;
 
 use mindplay\stockpile\AbstractContainer;
 use mindplay\stockpile\Container;
-use PHP_CodeCoverage;
-use PHP_CodeCoverage_Exception;
 use PHP_CodeCoverage_Report_Text;
 use PHP_CodeCoverage_Report_Clover;
-use ReflectionClass;
-use Closure;
-use Exception;
 
 require __DIR__ . '/header.php';
 
@@ -112,10 +107,9 @@ class TestCustomContainer extends AbstractContainer
 }
 
 if (coverage()) {
-    $filter =coverage()->filter();
-    $filter->addDirectoryToWhitelist(__DIR__ . '/src');
-    // there's no code in this Exception type, so nothing to test:
-    $filter->removeFileFromWhitelist(__DIR__ . '/src/ContainerException.php');
+    $filter = coverage()->filter();
+
+    $filter->addDirectoryToWhitelist(dirname(__DIR__) . '/src');
 
     coverage()->start('test');
 }
@@ -151,7 +145,7 @@ test(
 
         ok(true, 'type-checking is bypassed when component is explicitly set to null');
 
-        $container = new TestContainer();
+        $container = new TestContainer(__DIR__);
 
         $container->load('test.config.php');
 

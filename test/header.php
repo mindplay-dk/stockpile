@@ -1,5 +1,12 @@
 <?php
 
+namespace test;
+
+use PHP_CodeCoverage;
+use PHP_CodeCoverage_Exception;
+use ReflectionClass;
+use Exception;
+
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 // https://gist.github.com/mindplay-dk/4260582
