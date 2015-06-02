@@ -38,11 +38,23 @@ abstract class Container extends AbstractContainer
      */
     protected function _init()
     {
+        // collect doc-blocks from parent classes:
+
+        $docs = '';
+
+        $class_name = get_class($this);
+
+        do {
+            $class = new ReflectionClass($class_name);
+
+            $docs .= $class->getDocComment();
+
+            $class_name = get_parent_class($class_name);
+        } while ($class_name !== __CLASS__);
+
         // parse @property-annotations for property-names and types:
 
-        $class = new ReflectionClass(get_class($this));
-
-        if (preg_match_all(self::PROPERTY_PATTERN, $class->getDocComment(), $matches) === 0) {
+        if (preg_match_all(self::PROPERTY_PATTERN, $docs, $matches) === 0) {
             throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
         }
 

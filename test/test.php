@@ -68,6 +68,30 @@ class EmptyContainer extends Container
     {}
 }
 
+/**
+ * @property bool $base
+ */
+class BaseContainer extends Container
+{
+    protected function init()
+    {
+        $this->base = true;
+    }
+}
+
+/**
+ * @property bool $extended
+ */
+class ExtendedContainer extends BaseContainer
+{
+    protected function init()
+    {
+        parent::init();
+
+        $this->extended = true;
+    }
+}
+
 class TestCustomContainer extends AbstractContainer
 {
     protected function init()
@@ -586,6 +610,18 @@ test(
                 $container = new EmptyContainer();
             }
         );
+    }
+);
+
+test(
+    'can inherit property annotations',
+    function () {
+        $container = new ExtendedContainer();
+
+        $container->seal();
+
+        ok($container->base, 'can get component inherited from base class');
+        ok($container->extended, 'can get component from own class');
     }
 );
 
