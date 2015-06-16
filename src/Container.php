@@ -13,10 +13,9 @@
 
 namespace mindplay\stockpile;
 
+use mindplay\filereflection\ReflectionFile;
 use mindplay\filereflection\CacheProvider;
 use ReflectionClass;
-
-use mindplay\filereflection\ReflectionFile;
 
 /**
  * Abstract base-class for service/configuration-containers using property-annotations.
@@ -43,12 +42,16 @@ abstract class Container extends AbstractContainer
 
         if ($cache) {
             $class = new ReflectionClass($this);
+            $self = $this;
 
             $this->_types = $cache->read(
                 $class->getName(),
                 filemtime($class->getFileName()),
-                function () {
-                    return $this->parseDocBlocks();
+                function () use ($class, $self) {
+                    $method = $class->getMethod('parseDocBlocks');
+                    $method->setAccessible(true);
+
+                    return $method->invoke($self);
                 }
             );
         } else {
