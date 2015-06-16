@@ -178,6 +178,33 @@ $container->logger = new Logger(...); // eager construction, vs lazy register()
 ```
 
 
+### Caching
+
+Very large applications (with many containers and lots of properties) may benefit
+from caching - the included benchmark demonstrates the benefit of this, showing
+a performance increase of ~ 3.5x, but don't overestimate the impact of this
+difference; for most applications, the difference in practice may be at the most
+a couple of milliseconds, since it's already pretty fast without caching.
+
+To configure caching, you need to override the protected `getCache()` method -
+you might for example use a subfolder under a Container's root path:
+
+```PHP
+class MyContainer extends Container
+{
+    /**
+     * @return CacheProvider
+     */
+    protected function getCache()
+    {
+        return new FileCache($this->getRootPath() . '/cache');
+    }
+}
+```
+
+Note that this folder must be writable by the web server's user account.
+
+
 ### Advanced Use
 
 For advanced uses, such as building a Container with specialized behavior (e.g.
