@@ -4,24 +4,27 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "58ae77ef665984fba48df5c26360ef7a",
+    "hash": "4463916f177fbcb47f53f4476ac067cf",
     "packages": [
         {
             "name": "mindplay/filereflection",
-            "version": "1.1.0",
+            "version": "1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mindplay-dk/filereflection.git",
-                "reference": "4e16b66d566f05c8687705408662094483848c0d"
+                "reference": "0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mindplay-dk/filereflection/zipball/4e16b66d566f05c8687705408662094483848c0d",
-                "reference": "4e16b66d566f05c8687705408662094483848c0d",
+                "url": "https://api.github.com/repos/mindplay-dk/filereflection/zipball/0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d",
+                "reference": "0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0"
+            },
+            "require-dev": {
+                "mindplay/benchpress": "*@dev"
             },
             "type": "library",
             "autoload": {
@@ -40,7 +43,7 @@
                 }
             ],
             "description": "Complements the PHP reflection API with the missing ReflectionFile class",
-            "time": "2014-08-24 12:44:02"
+            "time": "2015-06-03 21:01:07"
         }
     ],
     "packages-dev": [
@@ -50,12 +53,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/mindplay-dk/benchpress.git",
-                "reference": "9f0627cfd91639de035853e97b01f1b8b7899904"
+                "reference": "fb712d97407daea04cca379c8b965c8409957828"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mindplay-dk/benchpress/zipball/9f0627cfd91639de035853e97b01f1b8b7899904",
-                "reference": "9f0627cfd91639de035853e97b01f1b8b7899904",
+                "url": "https://api.github.com/repos/mindplay-dk/benchpress/zipball/fb712d97407daea04cca379c8b965c8409957828",
+                "reference": "fb712d97407daea04cca379c8b965c8409957828",
                 "shasum": ""
             },
             "require": {
@@ -78,7 +81,7 @@
                 }
             ],
             "description": "A simple benchmark suite for PHP 5.3 and up",
-            "time": "2014-11-07 11:27:06"
+            "time": "2015-06-08 16:34:50"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -86,12 +89,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "672248f49a25fcca46aa6c73612d6731d6b83c4a"
+                "reference": "a02682e0fee6392379f6cc1784aa8a7b83bf4551"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/672248f49a25fcca46aa6c73612d6731d6b83c4a",
-                "reference": "672248f49a25fcca46aa6c73612d6731d6b83c4a",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/a02682e0fee6392379f6cc1784aa8a7b83bf4551",
+                "reference": "a02682e0fee6392379f6cc1784aa8a7b83bf4551",
                 "shasum": ""
             },
             "require": {
@@ -114,7 +117,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.1.x-dev"
+                    "dev-master": "2.2.x-dev"
                 }
             },
             "autoload": {
@@ -140,7 +143,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2015-05-25 16:40:23"
+            "time": "2015-06-09 13:06:54"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -235,16 +238,16 @@
         },
         {
             "name": "phpunit/php-token-stream",
-            "version": "1.4.1",
+            "version": "1.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-token-stream.git",
-                "reference": "eab81d02569310739373308137284e0158424330"
+                "reference": "db63be1159c81df649cd0260e30249a586d4129e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-token-stream/zipball/eab81d02569310739373308137284e0158424330",
-                "reference": "eab81d02569310739373308137284e0158424330",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-token-stream/zipball/db63be1159c81df649cd0260e30249a586d4129e",
+                "reference": "db63be1159c81df649cd0260e30249a586d4129e",
                 "shasum": ""
             },
             "require": {
@@ -280,7 +283,7 @@
             "keywords": [
                 "tokenizer"
             ],
-            "time": "2015-04-08 04:46:07"
+            "time": "2015-06-12 07:34:24"
         },
         {
             "name": "sebastian/environment",

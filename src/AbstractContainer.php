@@ -33,7 +33,7 @@ abstract class AbstractContainer
     /**
      * @var array map of component-names to type-names
      */
-    private $_types = array();
+    protected $_types = array();
 
     /**
      * @var Closure[] map of component-names to initialization closures

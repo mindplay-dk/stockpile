@@ -3,6 +3,7 @@
 namespace benchmark;
 
 use mindplay\benchpress\Benchmark;
+use mindplay\filereflection\FileCache;
 use mindplay\stockpile\Container;
 
 require __DIR__ . '/header.php';
@@ -25,6 +26,7 @@ class TestContainer extends Container
         });
     }
 }
+
 /**
  * @property string $string1
  * @property string $string2
@@ -74,6 +76,14 @@ class LongContainer extends Container
     }
 }
 
+class CachedContainer extends LongContainer
+{
+    protected function getCache()
+    {
+        return new FileCache(__DIR__ . '/cache');
+    }
+}
+
 class TestDummy
 {}
 
@@ -103,6 +113,14 @@ $bench->add(
     'configuration overhead, 20 components',
     function () {
         $container = new LongContainer();
+        $container->seal();
+    }
+);
+
+$bench->add(
+    'configuration overhead, 20 components, cached',
+    function () {
+        $container = new CachedContainer();
         $container->seal();
     }
 );

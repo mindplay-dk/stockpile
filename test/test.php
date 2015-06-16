@@ -2,6 +2,7 @@
 
 namespace test;
 
+use mindplay\filereflection\CacheProvider;
 use mindplay\stockpile\AbstractContainer;
 use mindplay\stockpile\Container;
 use PHP_CodeCoverage_Report_Text;
@@ -127,6 +128,29 @@ class TestCustomContainer extends AbstractContainer
     public function doCheckType($name, $value)
     {
         $this->checkType($name, $value);
+    }
+}
+
+class MockCache implements CacheProvider
+{
+    public $data = array();
+
+    public function read($key, $timestamp, $refresh)
+    {
+        return isset($this->data[$key])
+            ? $this->data[$key]
+            : $this->data[$key] = $refresh();
+    }
+}
+
+class CachedTestContainer extends TestContainer
+{
+    /** @var MockCache */
+    public $cache;
+
+    protected function getCache()
+    {
+        return $this->cache = new MockCache();
     }
 }
 
@@ -622,6 +646,30 @@ test(
 
         ok($container->base, 'can get component inherited from base class');
         ok($container->extended, 'can get component from own class');
+    }
+);
+
+test(
+    'can cache parsed type information',
+    function () {
+        $container = new CachedTestContainer();
+
+        $container->dummy = new TestDummy();
+
+        $container->seal();
+
+        eq(
+            $container->cache->data,
+            array(
+                'test\CachedTestContainer' => array(
+                    'string' => 'string',
+                    'int'    => 'int',
+                    'dummy'  => '\test\TestDummy',
+                    'loaded' => 'string',
+                )
+            ),
+            'property annotations were cached'
+        );
     }
 );
 

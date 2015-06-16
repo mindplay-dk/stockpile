@@ -13,6 +13,7 @@
 
 namespace mindplay\stockpile;
 
+use mindplay\filereflection\CacheProvider;
 use ReflectionClass;
 
 use mindplay\filereflection\ReflectionFile;
@@ -38,32 +39,20 @@ abstract class Container extends AbstractContainer
      */
     protected function _init()
     {
-        // collect doc-blocks from parent classes:
+        $cache = $this->getCache();
 
-        $docs = '';
+        if ($cache) {
+            $class = new ReflectionClass($this);
 
-        $class_name = get_class($this);
-
-        do {
-            $class = new ReflectionClass($class_name);
-
-            $docs .= $class->getDocComment();
-
-            $class_name = get_parent_class($class_name);
-        } while ($class_name !== __CLASS__);
-
-        // parse @property-annotations for property-names and types:
-
-        if (preg_match_all(self::PROPERTY_PATTERN, $docs, $matches) === 0) {
-            throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
-        }
-
-        $file = new ReflectionFile($class->getFileName());
-
-        foreach ($matches[2] as $i => $name) {
-            $type = $file->resolveName($matches[1][$i]);
-
-            $this->define($name, $type);
+            $this->_types = $cache->read(
+                $class->getName(),
+                filemtime($class->getFileName()),
+                function () {
+                    return $this->parseDocBlocks();
+                }
+            );
+        } else {
+            $this->parseDocBlocks();
         }
 
         parent::_init();
@@ -108,5 +97,62 @@ abstract class Container extends AbstractContainer
     public function __isset($name)
     {
         return $this->isDefined($name);
+    }
+
+    /**
+     * Creates a cache provider for internal caching of parsed annotations.
+     *
+     * Default implementation returns NULL - to enable caching, override this
+     * method in your container class, with e.g.:
+     *
+     *     return new \mindplay\filereflection\FileCache(...)
+     *
+     * @return CacheProvider|null cache provider (or NULL to initialize without caching)
+     */
+    protected function getCache()
+    {
+        return null; // default implementation; caching disabled
+    }
+
+    /**
+     * Parse doc-blocks for @property-annotations
+     *
+     * @return array map of component-names to type-names
+     *
+     * @see _init()
+     *
+     * @throws ContainerException if no property-annotations are available
+     */
+    protected function parseDocBlocks()
+    {
+        // collect doc-blocks from parent classes:
+
+        $docs = '';
+
+        $class_name = get_class($this);
+
+        do {
+            $class = new ReflectionClass($class_name);
+
+            $docs .= $class->getDocComment();
+
+            $class_name = get_parent_class($class_name);
+        } while ($class_name !== __CLASS__);
+
+        // parse @property-annotations for property-names and types:
+
+        if (preg_match_all(self::PROPERTY_PATTERN, $docs, $matches) === 0) {
+            throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
+        }
+
+        $file = new ReflectionFile($class->getFileName());
+
+        foreach ($matches[2] as $i => $name) {
+            $type = $file->resolveName($matches[1][$i]);
+
+            $this->define($name, $type);
+        }
+
+        return $this->_types;
     }
 }
