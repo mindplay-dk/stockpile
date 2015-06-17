@@ -130,8 +130,6 @@ abstract class Container extends AbstractContainer
     {
         // collect doc-blocks from parent classes:
 
-        $docs = '';
-
         $class_name = get_class($this);
 
         $this->_types = array();
@@ -140,8 +138,6 @@ abstract class Container extends AbstractContainer
             $class = new ReflectionClass($class_name);
 
             $docs = $class->getDocComment();
-
-            $class_name = get_parent_class($class_name);
 
             // parse @property-annotations for property-names and types:
 
@@ -154,6 +150,8 @@ abstract class Container extends AbstractContainer
                     $this->define($name, $type);
                 }
             }
+
+            $class_name = get_parent_class($class_name);
         } while ($class_name !== __CLASS__);
 
         if (count($this->_types) === 0) {
