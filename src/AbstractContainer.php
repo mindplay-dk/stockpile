@@ -482,17 +482,17 @@ abstract class AbstractContainer
             return; // any type is allowed
         }
 
-        if (array_key_exists($type, self::$checkers) === true) {
-            // check a known PHP pseudo-type:
-            if (call_user_func(self::$checkers[$type], $value) === false) {
-                throw new ContainerException("component-type mismatch - component '{$name}' was defined as: {$type}");
-            }
-        } else {
-            // check a class or interface type:
-            if (($value instanceof $type) === false) {
-                throw new ContainerException("component-type mismatch - component '{$name}' was defined as: {$type}");
-            }
+        if (array_key_exists($type, self::$checkers) && call_user_func(self::$checkers[$type], $value)) {
+            return; // pseudo type-check passed
+        } elseif (is_object($value) && $value instanceof $type) {
+            return; // class/interface type-check passed
         }
+
+        $actual = is_object($value)
+            ? get_class($value)
+            : gettype($value);
+
+        throw new ContainerException("type mismatch: component '{$name}' defined as: {$type}, {$actual} given");
     }
 
     /**
