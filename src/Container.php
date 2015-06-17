@@ -134,26 +134,30 @@ abstract class Container extends AbstractContainer
 
         $class_name = get_class($this);
 
+        $this->_types = array();
+
         do {
             $class = new ReflectionClass($class_name);
 
-            $docs .= $class->getDocComment();
+            $docs = $class->getDocComment();
 
             $class_name = get_parent_class($class_name);
+
+            // parse @property-annotations for property-names and types:
+
+            if (preg_match_all(self::PROPERTY_PATTERN, $docs, $matches) > 0) {
+                $file = new ReflectionFile($class->getFileName());
+
+                foreach ($matches[2] as $i => $name) {
+                    $type = $file->resolveName($matches[1][$i]);
+
+                    $this->define($name, $type);
+                }
+            }
         } while ($class_name !== __CLASS__);
 
-        // parse @property-annotations for property-names and types:
-
-        if (preg_match_all(self::PROPERTY_PATTERN, $docs, $matches) === 0) {
+        if (count($this->_types) === 0) {
             throw new ContainerException('class ' . get_class($this) . ' has no @property-annotations');
-        }
-
-        $file = new ReflectionFile($class->getFileName());
-
-        foreach ($matches[2] as $i => $name) {
-            $type = $file->resolveName($matches[1][$i]);
-
-            $this->define($name, $type);
         }
 
         return $this->_types;
