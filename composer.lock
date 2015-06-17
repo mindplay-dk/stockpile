@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "4463916f177fbcb47f53f4476ac067cf",
+    "hash": "3d9beb894220e23e2b0cfa1e5c48dfac",
     "packages": [
         {
             "name": "mindplay/filereflection",
-            "version": "1.2.0",
+            "version": "1.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mindplay-dk/filereflection.git",
-                "reference": "0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d"
+                "reference": "2ff8b4504189863dc2f2cbfdcca884e7583bb613"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mindplay-dk/filereflection/zipball/0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d",
-                "reference": "0e27c374ed0bfaa918a6b7a18d3dde6a5acd0a2d",
+                "url": "https://api.github.com/repos/mindplay-dk/filereflection/zipball/2ff8b4504189863dc2f2cbfdcca884e7583bb613",
+                "reference": "2ff8b4504189863dc2f2cbfdcca884e7583bb613",
                 "shasum": ""
             },
             "require": {
@@ -43,7 +43,7 @@
                 }
             ],
             "description": "Complements the PHP reflection API with the missing ReflectionFile class",
-            "time": "2015-06-03 21:01:07"
+            "time": "2015-06-17 16:00:01"
         }
     ],
     "packages-dev": [
