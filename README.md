@@ -10,6 +10,10 @@ https://github.com/mindplay-dk/stockpile
 Stockpile provides a base-class for easy implementation of the [service locator](http://en.wikipedia.org/wiki/Service_locator_pattern)
 pattern, and provides simple means for implementing simple, efficient [dependency injection](http://en.wikipedia.org/wiki/Dependency_injection).
 
+:warning: **Service Locator is generally considered to be an anti-pattern** - if you're looking for a modern DI container 
+that does not encourage or optimize for that pattern, but still provides great IDE support,
+please check out [Unbox](https://github.com/mindplay-dk/unbox).
+
 Tested and designed for PHP 5.3 and up.
 
 See "example.php" in the root-folder for an example of how to use this class.
